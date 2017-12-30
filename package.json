@@ -1,0 +1,24 @@
+{
+  "name": "elm-gen",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run build && mocha --reporter spec ./dist/tests",
+    "build": "webpack"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/chai": "^4.0.10",
+    "@types/mocha": "^2.2.45",
+    "@types/shelljs": "^0.7.7",
+    "chai": "^4.1.2",
+    "clean-webpack-plugin": "^0.1.17",
+    "mocha": "^4.1.0",
+    "shelljs": "^0.7.8",
+    "ts-loader": "^3.2.0",
+    "typescript": "^2.6.2"
+  }
+}
