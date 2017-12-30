@@ -10,9 +10,6 @@ genDecoderForRecord typeName accessor recordAst =
     let
         decodeApp =
             (Application (Variable [ "decode" ]) (Variable [ typeName ]))
-
-        pipeOp =
-            BinOp (Variable [ "|>" ])
     in
         case recordAst of
             TypeRecord l ->
@@ -50,12 +47,32 @@ decodeType type_ =
                     l ->
                         List.foldl (\item accum -> Application accum (decodeType item)) firstType l
 
-        TypeTuple (a :: cons) ->
-            List.foldl (\item accum -> Application accum (decodeType item)) (decodeType a) cons
+        TypeTuple [ a ] ->
+            (decodeType a)
+
+        TypeTuple l ->
+            case List.reverse <| List.indexedMap (\i x -> ( i, x )) l of
+                [] ->
+                    Debug.crash "Empty TypeTuple is not allowed!"
+
+                a :: cons ->
+                    let
+                        pipelineStart =
+                            pipeOp <| Application (variable "succeed") (variable <| String.repeat (List.length cons) ",")
+                    in
+                        pipelineStart <| List.foldl (\item accum -> pipeOp (tupleFieldDec item) accum) (tupleFieldDec a) cons
 
         _ ->
             Debug.crash "Not allowed type in recordField"
 
 
+tupleFieldDec ( index, type_ ) =
+    Application (variable "custom") (Application (Application (variable "index") (Integer index)) (decodeType type_))
+
+
 variable x =
     Variable [ x ]
+
+
+pipeOp =
+    BinOp (Variable [ "|>" ])
