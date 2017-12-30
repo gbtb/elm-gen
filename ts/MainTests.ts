@@ -1,8 +1,25 @@
 import * as mocha from 'mocha';
 import * as chai from 'chai';
 import * as shell from 'shelljs';
+import * as fs from 'fs';
+import * as path from 'path';
 
-const expect = chai.expect;
+const expect  = chai.expect;
+const execDir = './';
+const dataDir = '../tests_data/';
+
+function readFile(filePath: string){
+  return fs.readFileSync(filePath, { encoding: 'utf8' });
+}
+
+function outPath(filename: string){
+  return path.join(execDir, filename);
+}
+
+function dataPath(filename: string){
+  return path.join(dataDir, filename);
+}
+
 describe('My test tools', () => {
 
   it('just working' , () => {
@@ -10,10 +27,20 @@ describe('My test tools', () => {
   });
 
 });
-describe('My cli tool', () => {
-  
-    it('just emits what was passed to it' , () => {
-      expect(shell.exec("./dist/main 'just a string'").stdout).to.equal('just a string');
-    });
-  
-  })
+describe('Elm-gen by default produces decoder and encoders', () => {
+  it('yells if no arguments provided' , () => {
+    const ret = shell.exec("./dist/elm-gen");
+    expect(ret.stderr).to.equal(
+      "Error: Required arguments not provided!\n"
+    );
+    expect(ret.stdout).to.equal(
+      "usage: elm-gen [input_file] [output_file]\n"
+    );
+  });  
+
+  it('for basic type alias' , () => {
+    shell.cd('dist');
+    shell.exec("./elm-gen ../tests_data/Basic.elm .");
+    expect(readFile(outPath("BasicDecoders.elm"))).to.equal(readFile(dataPath("BasicDecoders.elm")));
+  });
+})
