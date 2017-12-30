@@ -30,12 +30,32 @@ genDecoderForRecord typeName accessor recordAst =
 
 recordFieldDec ( name, type_ ) =
     let
-        typeName =
-            case type_ of
-                TypeConstructor [ typeName ] _ ->
-                    String.toLower typeName
-
-                _ ->
-                    Debug.crash "Not allowed type in recordField"
+        typeDecoder =
+            decodeType type_
     in
-        Application (Application (Variable [ "required" ]) (String name)) (Variable [ typeName ])
+        Application (Application (Variable [ "required" ]) (String name)) (typeDecoder)
+
+
+decodeType type_ =
+    case type_ of
+        TypeConstructor [ typeName ] argsTypes ->
+            let
+                firstType =
+                    variable <| String.toLower typeName
+            in
+                case argsTypes of
+                    [] ->
+                        firstType
+
+                    l ->
+                        List.foldl (\item accum -> Application accum (decodeType item)) firstType l
+
+        TypeTuple (a :: cons) ->
+            List.foldl (\item accum -> Application accum (decodeType item)) (decodeType a) cons
+
+        _ ->
+            Debug.crash "Not allowed type in recordField"
+
+
+variable x =
+    Variable [ x ]
