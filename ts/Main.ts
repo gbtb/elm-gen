@@ -1,3 +1,4 @@
+/// <reference path="elm.d.ts" />
 import * as parseArgs from 'minimist'
 import * as fs from 'fs';
 import * as path from 'path';
@@ -19,6 +20,16 @@ if (!args._ ||  args._.length != 4){
 
     outPath = path.join(outPath, outFileName);
     console.log(`Writing output to file: ${outPath}`);
-    fs.writeFileSync(outPath, "111");
+
+    const Elm =  require("../elm/src/Main.elm");
+    const app = Elm.Main.worker();
+    app.ports.output.subscribe(function (string: String) {
+        fs.writeFileSync(outPath, string);
+    });
+
+    const fileContent: string = fs.readFileSync(inputPath, {encoding: 'utf-8'});
+    app.ports.input.send(fileContent);
+
+    
 
 }

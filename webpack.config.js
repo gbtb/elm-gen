@@ -8,7 +8,7 @@ module.exports = {
   entry: {  
     "elm-gen":   './ts/Main.ts',
     tests:  './ts/MainTests.ts',
-    "elm-part": './elm/src/Main.elm'
+    //"elm-part": './elm/src/Main.elm'
   },
   module: {
     rules: [

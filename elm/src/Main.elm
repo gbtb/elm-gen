@@ -6,6 +6,13 @@ port module Main exposing (main)
 @docs main
 -}
 
+--required to interop with js
+
+import Json.Decode
+
+
+--
+
 import Platform exposing (program)
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
@@ -15,34 +22,35 @@ import Printer exposing (printStatement, produceString)
 
 
 type alias Model =
-    { strings : List String
+    { string : String
     }
 
 
 type Msg
-    = AddStrings (List String)
+    = AddString String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        AddStrings strings ->
+        AddString string ->
             let
                 ast =
-                    parseModule operators <| String.join "\n" strings
+                    parseModule operators string
             in
                 ( model
                 , output <|
-                    case ast of
-                        Err _ ->
-                            Debug.crash "Failed to parse module!"
+                    String.join "\n" <|
+                        case ast of
+                            Err _ ->
+                                Debug.crash "Failed to parse module!"
 
-                        Ok ( _, _, statements ) ->
-                            let
-                                records =
-                                    List.filter statementFilter statements
-                            in
-                                List.map (genDecoder >> printStatement >> produceString 2) records
+                            Ok ( _, _, statements ) ->
+                                let
+                                    records =
+                                        List.filter statementFilter statements
+                                in
+                                    List.map (genDecoder >> printStatement >> produceString 2) records
                 )
 
 
@@ -61,7 +69,7 @@ statementFilter s =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    input AddStrings
+    input AddString
 
 
 {-| Main func as it is
@@ -69,13 +77,13 @@ subscriptions _ =
 main : Program Never Model Msg
 main =
     program
-        { init = ( { strings = [] }, Cmd.none )
+        { init = ( { string = "" }, Cmd.none )
         , update = update
         , subscriptions = subscriptions
         }
 
 
-port output : List String -> Cmd msg
+port output : String -> Cmd msg
 
 
-port input : (List String -> msg) -> Sub msg
+port input : (String -> msg) -> Sub msg
