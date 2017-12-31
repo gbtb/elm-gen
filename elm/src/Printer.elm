@@ -1,0 +1,161 @@
+module Printer exposing (..)
+
+import Ast.Statement exposing (..)
+import Ast.BinOp exposing (..)
+import Ast.Expression exposing (..)
+
+
+type alias PrinterSettings =
+    { tabs : Int
+    , tabWidth : Int
+    }
+
+
+type PrintRepr
+    = Line Int String
+    | Lines (List PrintRepr)
+
+
+ident i printRepr =
+    case printRepr of
+        Line j str ->
+            Line (i + j) str
+
+        Lines lines ->
+            Lines <| List.map (\printRepr -> ident i printRepr) lines
+
+
+makeLines arg1 arg2 =
+    case ( arg1, arg2 ) of
+        ( Line _ _, Line _ _ ) ->
+            Lines [ arg1, arg2 ]
+
+        ( Line _ _, Lines l ) ->
+            Lines (arg1 :: l)
+
+        ( Lines l, Line _ _ ) ->
+            Lines (l ++ [ arg2 ])
+
+        ( Lines l1, Lines l2 ) ->
+            Lines (l1 ++ l2)
+
+
+(+>) a b =
+    case ( a, b ) of
+        ( Line i str1, Line _ str2 ) ->
+            Line i (str1 ++ " " ++ str2)
+
+        ( Line i str1, Lines lines ) ->
+            let
+                identedLines =
+                    List.map (\printRepr -> ident i printRepr) lines
+            in
+                Lines (a :: identedLines)
+
+        _ ->
+            Debug.crash "Failed to concatenate!"
+
+
+prepend line printRepr =
+    case line of
+        Line _ str1 ->
+            case printRepr of
+                Line i str2 ->
+                    Line i (str1 ++ " " ++ str2)
+
+                Lines ((Line i str2) :: cons) ->
+                    Lines <| (Line i (str1 ++ " " ++ str2)) :: cons
+
+                _ ->
+                    Debug.crash "Incorrect PrinterRepresentation to prepend to!"
+
+        _ ->
+            Debug.crash "Cannot prepend bunch of lines!"
+
+
+infixr 9 +<
+
+
+type alias PrintContext =
+    { printedBinOp : Bool
+    }
+
+
+initContext =
+    { printedBinOp = False
+    }
+
+
+printExpression : PrintContext -> Expression -> PrintRepr
+printExpression context e =
+    let
+        defaultContext =
+            initContext
+    in
+        case e of
+            Integer i ->
+                Line 0 <| toString i
+
+            String s ->
+                Line 0 <| "\"" ++ s ++ "\""
+
+            Variable l ->
+                Line 0 <| String.join "." l
+
+            Application func arg ->
+                printExpression defaultContext func +> printExpression defaultContext arg
+
+            BinOp op arg1 arg2 ->
+                let
+                    rightPart argContext =
+                        prepend (printExpression defaultContext op) (printExpression argContext arg2)
+                in
+                    if (isSimpleExpression arg2) then
+                        prepend (printExpression defaultContext arg1) (rightPart initContext)
+                    else
+                        makeLines (printExpression defaultContext arg1) <|
+                            if not context.printedBinOp then
+                                ident 1 <| rightPart { context | printedBinOp = True }
+                            else
+                                rightPart { context | printedBinOp = True }
+
+            _ ->
+                Debug.crash "Cant print this type of expression!"
+
+
+printStatement : Statement -> PrintRepr
+printStatement stmt =
+    case stmt of
+        FunctionDeclaration name args body ->
+            let
+                firstLine =
+                    prepend (Line 0 name) (printFunctionArgs args)
+            in
+                makeLines firstLine <| ident 1 (printExpression initContext body)
+
+        _ ->
+            Debug.crash "Print of this statement is unsupported(yet?)"
+
+
+printFunctionArgs args =
+    let
+        lineEnding =
+            Line 0 "="
+    in
+        (case args of
+            [] ->
+                lineEnding
+
+            l ->
+                List.foldr (\item accum -> (printExpression initContext item) +> accum) lineEnding l
+        )
+
+
+isSimpleExpression : Expression -> Bool
+isSimpleExpression e =
+    case e of
+        Variable _ ->
+            True
+
+        _ ->
+            False
