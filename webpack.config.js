@@ -8,6 +8,7 @@ module.exports = {
   entry: {  
     "elm-gen":   './ts/Main.ts',
     tests:  './ts/MainTests.ts',
+    "elm-part": './elm/src/Main.elm'
   },
   module: {
     rules: [
@@ -15,6 +16,16 @@ module.exports = {
         test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/
+      },
+      {
+        test: /\.elm$/,
+        exclude: [/elm-stuff/, /node_modules/],
+        use: {
+          loader: 'elm-webpack-loader',
+          options: {
+            cwd: './elm/src'
+          }
+        }
       }
     ]
   },

@@ -7,8 +7,11 @@ port module Main exposing (main)
 -}
 
 import Platform exposing (program)
-import Ast exposin (..)
-import Transformation exposing (genDecoderForRecord)
+import Ast exposing (..)
+import Ast.BinOp exposing (operators)
+import Ast.Statement exposing (..)
+import Transformation exposing (genDecoderForRecord, genDecoder)
+import Printer exposing (printStatement, produceString)
 
 
 type alias Model =
@@ -26,23 +29,21 @@ update msg model =
         AddStrings strings ->
             let
                 ast =
-                    parseModule operators String.join "\n" strings
+                    parseModule operators <| String.join "\n" strings
             in
-                case ast of
-                    Err _ ->
-                        Debug.crash "Failed to parse module!"
+                ( model
+                , output <|
+                    case ast of
+                        Err _ ->
+                            Debug.crash "Failed to parse module!"
 
-                    Ok (ParseOk () statements) ->
-                        let
-                            records =
-                                List.filter statementFilter statements
-                        in
-                            case records of
-                                [ TypeAliasDeclaration (TypeConstructor [ consName ] []) r ] ->
-                                    genDecoderForRecord consName "" r
-
-                                _ ->
-                                    Debug.crash "Waiting for one and only record!"
+                        Ok ( _, _, statements ) ->
+                            let
+                                records =
+                                    List.filter statementFilter statements
+                            in
+                                List.map (genDecoder >> printStatement >> produceString 2) records
+                )
 
 
 statementFilter s =

@@ -41,13 +41,24 @@ suite =
                         )
             ]
         , describe "statements"
-            [ test "Simple function declaration" <|
+            [ test "Simple function statement" <|
                 \_ ->
                     Expect.equal
                         (printStatement (FunctionDeclaration "sum" ([ Variable [ "a" ], Variable [ "b" ] ]) (BinOp (Variable [ "+" ]) (Variable [ "a" ]) (Variable [ "b" ]))))
                         (Lines
                             [ Line 0 "sum a b ="
                             , Line 1 "a + b"
+                            ]
+                        )
+            , test "Simple decoder" <|
+                \_ ->
+                    Expect.equal
+                        (printStatement (FunctionDeclaration "basicDecoder" [] (BinOp (Variable [ "|>" ]) (Application (Variable [ "decode" ]) (Variable [ "Basic" ])) (BinOp (Variable [ "|>" ]) (Application (Application (Variable [ "required" ]) (String "a")) (Variable [ "int" ])) (Application (Application (Variable [ "required" ]) (String "b")) (Variable [ "int" ]))))))
+                        (Lines
+                            [ Line 0 "basicDecoder ="
+                            , Line 1 "decode Basic"
+                            , Line 2 "|> required \"a\" int"
+                            , Line 2 "|> required \"b\" int"
                             ]
                         )
             ]

@@ -5,6 +5,20 @@ import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 
 
+genDecoder : Statement -> Statement
+genDecoder stmt =
+    case stmt of
+        TypeAliasDeclaration leftPart rightPart ->
+            let
+                typeName =
+                    getTypeName leftPart
+            in
+                FunctionDeclaration (typeName ++ "Decoder") [] <| genDecoderForRecord typeName "" rightPart
+
+        _ ->
+            Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
+
+
 genDecoderForRecord : String -> String -> Type -> Expression
 genDecoderForRecord typeName accessor recordAst =
     let
@@ -76,3 +90,12 @@ variable x =
 
 pipeOp =
     BinOp (Variable [ "|>" ])
+
+
+getTypeName t =
+    case t of
+        TypeConstructor [ name ] [] ->
+            name
+
+        _ ->
+            Debug.crash "Cannot extract typeName!"

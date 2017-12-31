@@ -16,6 +16,16 @@ type PrintRepr
     | Lines (List PrintRepr)
 
 
+produceString : Int -> PrintRepr -> String
+produceString tabWidth printRepr =
+    case printRepr of
+        Line i str ->
+            (String.repeat (i * tabWidth) " ") ++ str
+
+        Lines l ->
+            List.map (produceString tabWidth) l |> String.join "\n"
+
+
 ident i printRepr =
     case printRepr of
         Line j str ->
