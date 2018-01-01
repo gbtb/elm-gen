@@ -5,8 +5,13 @@ import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 
 
-genDecoder : Statement -> List Statement
-genDecoder stmt =
+type alias TransformationContext =
+    { decoderPrefix : String
+    }
+
+
+genDecoder : TransformationContext -> Statement -> List Statement
+genDecoder context stmt =
     case stmt of
         TypeAliasDeclaration leftPart rightPart ->
             let
@@ -15,27 +20,40 @@ genDecoder stmt =
 
                 decoderName =
                     String.toLower typeName ++ "Decoder"
+
+                decoderType =
+                    if String.length context.decoderPrefix > 0 then
+                        [ context.decoderPrefix, "Decoder" ]
+                    else
+                        [ "Decoder" ]
             in
-                [ FunctionTypeDeclaration decoderName <| TypeConstructor [ "JD", "Decoder" ] ([ leftPart ])
-                , FunctionDeclaration (decoderName) [] <| genDecoderForRecord typeName "" rightPart
+                [ FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
+                , FunctionDeclaration (decoderName) [] <| genDecoderForRecord context typeName rightPart
                 ]
 
         _ ->
             Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
 
 
-genDecoderForRecord : String -> String -> Type -> Expression
-genDecoderForRecord typeName accessor recordAst =
+qualifiedName prefix name =
+    if String.length prefix > 0 then
+        [ prefix, name ]
+    else
+        [ name ]
+
+
+genDecoderForRecord : TransformationContext -> String -> Type -> Expression
+genDecoderForRecord ctx typeName recordAst =
     let
         decodeApp =
-            (Application (Variable [ "decode" ]) (Variable [ typeName ]))
+            (Application (Variable <| qualifiedName ctx.decoderPrefix "decode") (Variable [ typeName ]))
     in
         case recordAst of
             TypeRecord l ->
                 case List.reverse l of
                     a :: cons ->
                         pipeOp decodeApp <|
-                            List.foldl (\item accum -> pipeOp (recordFieldDec item) accum) (recordFieldDec a) cons
+                            List.foldl (\item accum -> pipeOp (recordFieldDec ctx item) accum) (recordFieldDec ctx a) cons
 
                     _ ->
                         Debug.crash "Too much fields"
@@ -44,30 +62,30 @@ genDecoderForRecord typeName accessor recordAst =
                 Debug.crash "It is not a record!"
 
 
-recordFieldDec ( name, type_ ) =
+recordFieldDec ctx ( name, type_ ) =
     let
-        typeDecoder =
-            decodeType type_
+        typeDecoder ctx =
+            decodeType ctx type_
     in
-        Application (Application (Variable [ "required" ]) (String name)) (typeDecoder)
+        Application (Application (Variable <| qualifiedName ctx.decoderPrefix "required") (String name)) (typeDecoder ctx)
 
 
-decodeType type_ =
+decodeType ctx type_ =
     case type_ of
         TypeConstructor [ typeName ] argsTypes ->
             let
                 firstType =
-                    variable <| String.toLower typeName
+                    variable ctx.decoderPrefix <| String.toLower typeName
             in
                 case argsTypes of
                     [] ->
                         firstType
 
                     l ->
-                        List.foldl (\item accum -> Application accum (decodeType item)) firstType l
+                        List.foldl (\item accum -> Application accum (decodeType ctx item)) firstType l
 
         TypeTuple [ a ] ->
-            (decodeType a)
+            (decodeType ctx a)
 
         TypeTuple l ->
             case List.reverse <| List.indexedMap (\i x -> ( i, x )) l of
@@ -77,20 +95,24 @@ decodeType type_ =
                 a :: cons ->
                     let
                         pipelineStart =
-                            pipeOp <| Application (variable "succeed") (variable <| String.repeat (List.length cons) ",")
+                            pipeOp <|
+                                Application
+                                    (variable ctx.decoderPrefix "succeed")
+                                    (variable ctx.decoderPrefix <| String.repeat (List.length cons) ",")
                     in
-                        pipelineStart <| List.foldl (\item accum -> pipeOp (tupleFieldDec item) accum) (tupleFieldDec a) cons
+                        pipelineStart <| List.foldl (\item accum -> pipeOp (tupleFieldDec ctx item) accum) (tupleFieldDec ctx a) cons
 
         _ ->
             Debug.crash "Not allowed type in recordField"
 
 
-tupleFieldDec ( index, type_ ) =
-    Application (variable "custom") (Application (Application (variable "index") (Integer index)) (decodeType type_))
+tupleFieldDec ctx ( index, type_ ) =
+    Application (variable ctx.decoderPrefix "custom")
+        (Application (Application (variable ctx.decoderPrefix "index") (Integer index)) (decodeType ctx type_))
 
 
-variable x =
-    Variable [ x ]
+variable prefix x =
+    Variable <| qualifiedName prefix x
 
 
 pipeOp =

@@ -43,7 +43,7 @@ getTypes =
 
 
 printDecoders records =
-    List.concatMap genDecoder records |> List.map printStatement
+    List.concatMap (genDecoder { decoderPrefix = "JD" }) records |> List.map printStatement
 
 
 getModuleName s =
