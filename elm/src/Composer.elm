@@ -24,10 +24,22 @@ composeFile statements =
             List.map (produceString 2) <|
                 [ printStatement <| makeDecodersModuleDecl moduleDeclaration
                 , emptyLine
-                , emptyLine
                 ]
-                    ++ printImports moduleName
+                    ++ printImports moduleName (getTypes statements)
+                    ++ [ emptyLine, emptyLine ]
                     ++ printDecoders records
+
+
+getTypes =
+    List.filterMap
+        (\s ->
+            case s of
+                TypeAliasDeclaration (TypeConstructor [ consName ] []) (TypeRecord r) ->
+                    Just <| (flip TypeExport) Nothing consName
+
+                _ ->
+                    Nothing
+        )
 
 
 printDecoders records =
@@ -43,11 +55,11 @@ getModuleName s =
             Debug.crash "Not a module name!"
 
 
-printImports sourceModuleName =
+printImports sourceModuleName importedTypes =
     [ ImportStatement [ "Json", "Decode" ] (Just "JD") (Nothing)
     , ImportStatement [ "Json", "Decode", "Pipeline" ] (Just "JD") (Nothing)
     , ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing)
-    , ImportStatement sourceModuleName (Nothing) (Just AllExport)
+    , ImportStatement sourceModuleName (Nothing) (Just <| SubsetExport importedTypes)
     ]
         |> List.map (printStatement)
 

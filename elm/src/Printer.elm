@@ -168,12 +168,39 @@ printImportStatement moduleName alias exportSet =
                         Just AllExport ->
                             " exposing (..)"
 
+                        Just (SubsetExport typesList) ->
+                            " exposing ("
+                                ++ (List.map printExportSet typesList |> String.join ", ")
+                                ++ ")"
+
                         Nothing ->
                             ""
 
                         _ ->
                             Debug.crash "111"
                    )
+
+
+printExportSet : ExportSet -> String
+printExportSet es =
+    case es of
+        AllExport ->
+            ".."
+
+        SubsetExport nestedList ->
+            List.map printExportSet nestedList |> String.join ", "
+
+        FunctionExport name ->
+            name
+
+        TypeExport name constructors ->
+            name
+                ++ case constructors of
+                    Nothing ->
+                        ""
+
+                    Just nestedEs ->
+                        "(" ++ printExportSet nestedEs ++ ")"
 
 
 printModuleDeclaration moduleName exportSet =

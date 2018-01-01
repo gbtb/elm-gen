@@ -13,7 +13,7 @@ genDecoder stmt =
                 typeName =
                     getTypeName leftPart
             in
-                FunctionDeclaration (typeName ++ "Decoder") [] <| genDecoderForRecord typeName "" rightPart
+                FunctionDeclaration (String.toLower typeName ++ "Decoder") [] <| genDecoderForRecord typeName "" rightPart
 
         _ ->
             Debug.crash "Cannot generate decoder for this kind of statement(yet?)"

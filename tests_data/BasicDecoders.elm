@@ -6,8 +6,8 @@ import Json.Encode as JE
 import Basic exposing (Basic)
 
 
-decodeBasic : JD.Decoder Basic
-decodeBasic =
+basicDecoder : JD.Decoder Basic
+basicDecoder =
     JD.decode Basic
         |> JD.required "a" JD.int
         |> JD.required "b" JD.float
