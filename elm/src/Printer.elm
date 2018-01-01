@@ -83,7 +83,10 @@ prepend line printRepr =
             Debug.crash "Cannot prepend bunch of lines!"
 
 
-infixr 9 +<
+infixr 5 +<
+
+
+infixl 5 +>
 
 
 type alias PrintContext =
@@ -143,8 +146,47 @@ printStatement stmt =
             in
                 makeLines firstLine <| ident 1 (printExpression initContext body)
 
+        ModuleDeclaration moduleName exportSet ->
+            printModuleDeclaration moduleName exportSet
+
+        ImportStatement moduleName alias exportSet ->
+            printImportStatement moduleName alias exportSet
+
         _ ->
             Debug.crash "Print of this statement is unsupported(yet?)"
+
+
+printImportStatement moduleName alias exportSet =
+    let
+        lineStart =
+            "import " ++ (String.join "." moduleName)
+    in
+        Line 0 <|
+            lineStart
+                ++ (alias |> Maybe.map (\a -> " as " ++ a) |> Maybe.withDefault "")
+                ++ (case exportSet of
+                        Just AllExport ->
+                            " exposing (..)"
+
+                        Nothing ->
+                            ""
+
+                        _ ->
+                            Debug.crash "111"
+                   )
+
+
+printModuleDeclaration moduleName exportSet =
+    let
+        lineStart =
+            "module " ++ (String.join "." moduleName) ++ " exposing "
+    in
+        case exportSet of
+            AllExport ->
+                Line 0 <| lineStart ++ "(..)"
+
+            _ ->
+                Debug.crash "Not supported export set to print!"
 
 
 printFunctionArgs args =
