@@ -61,5 +61,15 @@ suite =
                             , Line 2 "|> required \"b\" int"
                             ]
                         )
+            , test "type1" <|
+                \_ ->
+                    Expect.equal
+                        (printType <| TypeConstructor [ "JD", "Decoder" ] ([ TypeConstructor [ "String" ] [] ]))
+                        ("JD.Decoder String")
+            , test "type2" <|
+                \_ ->
+                    Expect.equal
+                        (printType <| TypeConstructor [ "Dict" ] ([ TypeConstructor [ "Int" ] [], TypeTuple ([ TypeConstructor [ "List" ] ([ TypeConstructor [ "Char" ] [] ]) ]) ]))
+                        ("Dict Int (List Char)")
             ]
         ]

@@ -5,15 +5,20 @@ import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 
 
-genDecoder : Statement -> Statement
+genDecoder : Statement -> List Statement
 genDecoder stmt =
     case stmt of
         TypeAliasDeclaration leftPart rightPart ->
             let
                 typeName =
                     getTypeName leftPart
+
+                decoderName =
+                    String.toLower typeName ++ "Decoder"
             in
-                FunctionDeclaration (String.toLower typeName ++ "Decoder") [] <| genDecoderForRecord typeName "" rightPart
+                [ FunctionTypeDeclaration decoderName <| TypeConstructor [ "JD", "Decoder" ] ([ leftPart ])
+                , FunctionDeclaration (decoderName) [] <| genDecoderForRecord typeName "" rightPart
+                ]
 
         _ ->
             Debug.crash "Cannot generate decoder for this kind of statement(yet?)"

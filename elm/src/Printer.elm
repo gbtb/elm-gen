@@ -152,8 +152,35 @@ printStatement stmt =
         ImportStatement moduleName alias exportSet ->
             printImportStatement moduleName alias exportSet
 
+        FunctionTypeDeclaration name type_ ->
+            printFunctionTypeDeclaration name type_
+
         _ ->
             Debug.crash "Print of this statement is unsupported(yet?)"
+
+
+printFunctionTypeDeclaration name type_ =
+    Line 0 <| name ++ " : " ++ printType type_
+
+
+printType type_ =
+    case type_ of
+        TypeConstructor qualifiedType typesList ->
+            String.join "." qualifiedType
+                ++ (if List.length typesList > 0 then
+                        " "
+                    else
+                        ""
+                   )
+                ++ (String.join " " <| List.map printType typesList)
+
+        TypeTuple typesList ->
+            "("
+                ++ (List.map printType typesList |> String.join " ")
+                ++ ")"
+
+        _ ->
+            Debug.crash "Cannot print this type(yet?)"
 
 
 printImportStatement moduleName alias exportSet =
