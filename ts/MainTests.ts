@@ -41,6 +41,20 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   it('for basic type alias' , () => {
     shell.cd('dist');
     shell.exec("./elm-gen ../tests_data/Basic.elm .");
-    expect(readFile(outPath("BasicDecoders.elm"))).to.equal(readFile(dataPath("BasicDecoders.elm")));
+    expect(
+      readFile(outPath("BasicDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("BasicDecoders.elm"))
+    );
   });
+
+  it('for simple dependent types' , () => {
+    shell.cd('dist');
+    shell.exec("./elm-gen ../tests_data/DependentTypes.elm .");
+    expect(
+      readFile(outPath("DependentTypesDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("DependentTypesDecoders.elm"))
+    );
+  })
 })
