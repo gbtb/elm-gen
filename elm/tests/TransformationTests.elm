@@ -51,4 +51,11 @@ suite =
                             (genDecoderForRecord context "Basic" <| ((TypeRecord ([ ( "a", TypeTuple ([ TypeConstructor [ "Int" ] [], TypeConstructor [ "Float" ] [], TypeConstructor [ "String" ] [] ]) ) ]))))
                             (BinOp (Variable [ "|>" ]) (Application (Variable [ "decode" ]) (Variable [ "Basic" ])) (Application (Application (Variable [ "required" ]) (String "a")) (BinOp (Variable [ "|>" ]) (Application (Variable [ "succeed" ]) (Variable [ ",," ])) (BinOp (Variable [ "|>" ]) (Application (Variable [ "custom" ]) (Application (Application (Variable [ "index" ]) (Integer 0)) (Variable [ "int" ]))) (BinOp (Variable [ "|>" ]) (Application (Variable [ "custom" ]) (Application (Application (Variable [ "index" ]) (Integer 1)) (Variable [ "float" ]))) (Application (Variable [ "custom" ]) (Application (Application (Variable [ "index" ]) (Integer 2)) (Variable [ "string" ]))))))))
                 ]
+            , describe "Union types"
+                [ test "Generates decoder for simple union type" <|
+                    \_ ->
+                        Expect.equal
+                            (genDecoderForUnionType context <| TypeDeclaration (TypeConstructor [ "T" ] []) ([ TypeConstructor [ "A" ] [], TypeConstructor [ "B" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "C" ] [] ]))
+                            (Application (Variable [ "oneOf" ]) (List ([ Application (Application (Variable [ "field" ]) (String "A")) (Application (Variable [ "succeed" ]) (Variable [ "A" ])), Application (Application (Variable [ "field" ]) (String "B")) (Application (Application (Variable [ "map" ]) (Variable [ "B" ])) (Variable [ "int" ])), Application (Application (Variable [ "field" ]) (String "C")) (Application (Variable [ "succeed" ]) (Variable [ "C" ])) ])))
+                ]
             ]

@@ -69,6 +69,54 @@ qualifiedName prefix name =
         [ name ]
 
 
+genDecoderForUnionType : TransformationContext -> Statement -> Expression
+genDecoderForUnionType ctx unionType =
+    let
+        begin =
+            Application (variable ctx.decoderPrefix "oneOf")
+    in
+        case unionType of
+            TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
+                begin <| List <| List.map (genDecoderForUnionTypeConstructor ctx) constructors
+
+            _ ->
+                Debug.crash "It is not a union type!"
+
+
+genDecoderForUnionTypeConstructor ctx cons =
+    case cons of
+        TypeConstructor [ name ] args ->
+            Application
+                (Application (variable ctx.decoderPrefix "field")
+                    (String name)
+                )
+                (decodeUnionTypeArgs ctx name args)
+
+        _ ->
+            Debug.crash "Invalid union type constructor!"
+
+
+decodeUnionTypeArgs ctx name args =
+    let
+        n =
+            List.length args
+
+        start =
+            Application
+                (Application
+                    (variable ctx.decoderPrefix <| getMapFun n)
+                    (variable "" name)
+                )
+    in
+        case List.reverse args of
+            [] ->
+                (Application (variable ctx.decoderPrefix "succeed") (variable "" name))
+
+            a :: cons ->
+                start <|
+                    List.foldl (\item accum -> Application (decodeType ctx item) accum) (decodeType ctx a) cons
+
+
 genDecoderForRecord : TransformationContext -> String -> Type -> Expression
 genDecoderForRecord ctx typeName recordAst =
     let
@@ -173,6 +221,15 @@ variable prefix x =
 
 pipeOp =
     BinOp (Variable [ "|>" ])
+
+
+getMapFun n =
+    case n of
+        1 ->
+            "map"
+
+        x ->
+            "map" ++ (toString x)
 
 
 getTypeName t =
