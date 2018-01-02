@@ -6,13 +6,14 @@ import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 import Transformation exposing (..)
+import Set
 
 
 suite : Test
 suite =
     let
         context =
-            { decoderPrefix = "" }
+            { defaultContext | decoderPrefix = "" }
     in
         describe "Ast transformation"
             [ describe "Multiple fields"

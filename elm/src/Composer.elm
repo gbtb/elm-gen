@@ -3,9 +3,12 @@ module Composer exposing (..)
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
-import Transformation exposing (genDecoderForRecord, genDecoder)
-import Printer exposing (printStatement, produceString, (+>), PrintRepr(..))
+import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext)
+import Printer exposing (printStatement)
+import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import List.Extra as List
+import Set
+import Utils exposing (..)
 
 
 composeFile : List Statement -> String
@@ -21,13 +24,14 @@ composeFile statements =
             getModuleName moduleDeclaration
     in
         String.join "\n" <|
-            List.map (produceString 2) <|
+            List.map (produceString 4) <|
                 [ printStatement <| makeDecodersModuleDecl moduleDeclaration
                 , emptyLine
                 ]
                     ++ printImports moduleName (getTypes statements)
                     ++ [ emptyLine, emptyLine ]
                     ++ printDecoders records
+                    ++ [ emptyLine ]
 
 
 getTypes =
@@ -43,7 +47,7 @@ getTypes =
 
 
 printDecoders records =
-    List.concatMap (genDecoder { decoderPrefix = "JD" }) records |> List.map printStatement
+    List.concatMap (genDecoder defaultContext) records |> List.map printStatement
 
 
 getModuleName s =
@@ -76,15 +80,6 @@ makeDecodersModuleDecl stmt =
 
         _ ->
             Debug.crash "Incorrect statement kind was passed!"
-
-
-fromJust err m =
-    case m of
-        Just x ->
-            x
-
-        Nothing ->
-            Debug.crash err
 
 
 recordsFilter s =

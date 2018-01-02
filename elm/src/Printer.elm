@@ -3,90 +3,15 @@ module Printer exposing (..)
 import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
+import List.Extra as List
+import Utils exposing (..)
+import PrintRepr exposing (..)
 
 
 type alias PrinterSettings =
     { tabs : Int
     , tabWidth : Int
     }
-
-
-type PrintRepr
-    = Line Int String
-    | Lines (List PrintRepr)
-
-
-produceString : Int -> PrintRepr -> String
-produceString tabWidth printRepr =
-    case printRepr of
-        Line i str ->
-            (String.repeat (i * tabWidth) " ") ++ str
-
-        Lines l ->
-            List.map (produceString tabWidth) l |> String.join "\n"
-
-
-ident i printRepr =
-    case printRepr of
-        Line j str ->
-            Line (i + j) str
-
-        Lines lines ->
-            Lines <| List.map (\printRepr -> ident i printRepr) lines
-
-
-makeLines arg1 arg2 =
-    case ( arg1, arg2 ) of
-        ( Line _ _, Line _ _ ) ->
-            Lines [ arg1, arg2 ]
-
-        ( Line _ _, Lines l ) ->
-            Lines (arg1 :: l)
-
-        ( Lines l, Line _ _ ) ->
-            Lines (l ++ [ arg2 ])
-
-        ( Lines l1, Lines l2 ) ->
-            Lines (l1 ++ l2)
-
-
-(+>) a b =
-    case ( a, b ) of
-        ( Line i str1, Line _ str2 ) ->
-            Line i (str1 ++ " " ++ str2)
-
-        ( Line i str1, Lines lines ) ->
-            let
-                identedLines =
-                    List.map (\printRepr -> ident i printRepr) lines
-            in
-                Lines (a :: identedLines)
-
-        _ ->
-            Debug.crash "Failed to concatenate!"
-
-
-prepend line printRepr =
-    case line of
-        Line _ str1 ->
-            case printRepr of
-                Line i str2 ->
-                    Line i (str1 ++ " " ++ str2)
-
-                Lines ((Line i str2) :: cons) ->
-                    Lines <| (Line i (str1 ++ " " ++ str2)) :: cons
-
-                _ ->
-                    Debug.crash "Incorrect PrinterRepresentation to prepend to!"
-
-        _ ->
-            Debug.crash "Cannot prepend bunch of lines!"
-
-
-infixr 5 +<
-
-
-infixl 5 +>
 
 
 type alias PrintContext =
@@ -116,7 +41,17 @@ printExpression context e =
                 Line 0 <| String.join "." l
 
             Application func arg ->
-                printExpression defaultContext func +> printExpression defaultContext arg
+                printExpression defaultContext func
+                    +> if isSimpleExpression arg then
+                        printExpression defaultContext arg
+                       else
+                        printExpression defaultContext arg
+                            |> (if requireBraces arg then
+                                    braces
+                                else
+                                    identity
+                               )
+                            |> ident 1
 
             BinOp op arg1 arg2 ->
                 let
@@ -131,6 +66,12 @@ printExpression context e =
                                 ident 1 <| rightPart { context | printedBinOp = True }
                             else
                                 rightPart { context | printedBinOp = True }
+
+            Access (Variable [ prefix ]) names ->
+                Line 0 (String.join "." (prefix :: names))
+
+            List exprList ->
+                printList context exprList
 
             _ ->
                 Debug.crash "Cant print this type of expression!"
@@ -181,6 +122,24 @@ printType type_ =
 
         _ ->
             Debug.crash "Cannot print this type(yet?)"
+
+
+printList : PrintContext -> List Expression -> PrintRepr
+printList ctx exprList =
+    case exprList of
+        [] ->
+            Line 0 "[]"
+
+        [ a ] ->
+            prepend (Line 0 "[") (printExpression ctx a)
+
+        h :: cons ->
+            makeLines
+                (List.foldl (\accum item -> makeLines item accum)
+                    (Line 0 "[" +> printExpression ctx h)
+                    (List.map (\expr -> printExpression ctx expr |> prepend (Line 0 ",")) cons)
+                )
+                (Line 0 "]")
 
 
 printImportStatement moduleName alias exportSet =
@@ -263,5 +222,26 @@ isSimpleExpression e =
         Variable _ ->
             True
 
+        Integer _ ->
+            True
+
+        String _ ->
+            True
+
+        Access _ _ ->
+            True
+
         _ ->
             False
+
+
+requireBraces e =
+    case e of
+        List _ ->
+            False
+
+        Tuple _ ->
+            False
+
+        _ ->
+            True

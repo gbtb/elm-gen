@@ -18,9 +18,10 @@ import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
 import Transformation exposing (genDecoderForRecord, genDecoder)
-import Printer exposing (printStatement, produceString, (+>), PrintRepr(..))
+import Printer exposing (printStatement)
 import List.Extra as List
 import Composer exposing (composeFile)
+import PrintRepr exposing (produceString, (+>), PrintRepr(..))
 
 
 type alias Model =

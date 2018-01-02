@@ -6,6 +6,7 @@ import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 import Printer exposing (..)
+import PrintRepr exposing (..)
 
 
 printExpression =
@@ -26,6 +27,11 @@ suite =
                     Expect.equal
                         (printExpression (Application (Application (Variable [ "index" ]) (Integer 0)) (Variable [ "int" ])))
                         (Line 0 "index 0 int")
+            , test "Nested application" <|
+                \_ ->
+                    Expect.equal
+                        (printExpression (Application (Application (Variable [ "required" ]) (String "c")) (Application (Access (Variable [ "JD" ]) [ "list" ]) (Access (Variable [ "JD" ]) [ "string" ]))))
+                        (Line 0 "required \"c\" (JD.list JD.string)")
             , test "prints pipe bin op" <|
                 \_ ->
                     Expect.equal
@@ -39,6 +45,11 @@ suite =
                                 "|> required \"b\" int"
                             ]
                         )
+            , test "Access" <|
+                \_ ->
+                    Expect.equal
+                        (printExpression (Access (Variable [ "JD" ]) [ "null" ]))
+                        (Line 0 "JD.null")
             ]
         , describe "statements"
             [ test "Simple function statement" <|

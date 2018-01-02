@@ -3,10 +3,37 @@ module Transformation exposing (..)
 import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
+import Set
+import Dict
+import Utils exposing (..)
 
 
 type alias TransformationContext =
     { decoderPrefix : String
+    , knownTypes : Set.Set String
+    , templatesForTc : Dict.Dict String (Expression -> Expression)
+    }
+
+
+defaultContext =
+    { decoderPrefix = "JD"
+    , knownTypes = Set.fromList [ "int", "float", "string", "list", "array", "char", "bool" ]
+    , templatesForTc =
+        Dict.fromList
+            [ ( "maybe"
+              , (\x ->
+                    Application
+                        (Access (Variable [ "JD" ]) [ "oneOf" ])
+                        (List
+                            ([ Application (Access (Variable [ "JD" ]) [ "null" ]) (Variable [ "Nothing" ])
+                             , Application (Application (Access (Variable [ "JD" ]) [ "map" ]) (Variable [ "Just" ]))
+                                (x)
+                             ]
+                            )
+                        )
+                )
+              )
+            ]
     }
 
 
@@ -74,15 +101,13 @@ decodeType ctx type_ =
     case type_ of
         TypeConstructor [ typeName ] argsTypes ->
             let
-                firstType =
-                    variable ctx.decoderPrefix <| String.toLower typeName
+                typeName_ =
+                    String.toLower typeName
             in
-                case argsTypes of
-                    [] ->
-                        firstType
-
-                    l ->
-                        List.foldl (\item accum -> Application accum (decodeType ctx item)) firstType l
+                if Set.member typeName_ ctx.knownTypes then
+                    decodeKnownTypeConstructor ctx typeName_ argsTypes
+                else
+                    useTemplateDecoder ctx typeName_ argsTypes
 
         TypeTuple [ a ] ->
             (decodeType ctx a)
@@ -98,12 +123,43 @@ decodeType ctx type_ =
                             pipeOp <|
                                 Application
                                     (variable ctx.decoderPrefix "succeed")
-                                    (variable ctx.decoderPrefix <| String.repeat (List.length cons) ",")
+                                    (variable "" <| String.repeat (List.length cons) ",")
                     in
                         pipelineStart <| List.foldl (\item accum -> pipeOp (tupleFieldDec ctx item) accum) (tupleFieldDec ctx a) cons
 
         _ ->
             Debug.crash "Not allowed type in recordField"
+
+
+useTemplateDecoder ctx typeName_ argsTypes =
+    let
+        expr =
+            case argsTypes of
+                [] ->
+                    Debug.crash "Empty args list for complex type constructor"
+
+                [ t ] ->
+                    decodeType ctx t
+
+                h :: cons ->
+                    List.foldl (\item accum -> Application accum (decodeType ctx item)) (decodeType ctx h) cons
+    in
+        Dict.get typeName_ ctx.templatesForTc
+            |> Maybe.map (\f -> f expr)
+            |> fromJust ("Cannot decode this type: " ++ typeName_)
+
+
+decodeKnownTypeConstructor ctx typeName argsTypes =
+    let
+        firstType =
+            variable ctx.decoderPrefix typeName
+    in
+        case argsTypes of
+            [] ->
+                firstType
+
+            l ->
+                List.foldl (\item accum -> Application accum (decodeType ctx item)) firstType l
 
 
 tupleFieldDec ctx ( index, type_ ) =
