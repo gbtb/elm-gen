@@ -8,31 +8,30 @@ import Set
 import Utils exposing (..)
 
 
-{-
-   makeDependencyGraph : List Statement -> Dict.Dict String (Set.Set String)
-   makeDependencyGraph statements =
-       List.foldl () Dict.empty statements
+makeDependencyGraph : Set.Set String -> List Statement -> Dict.Dict String (Set.Set String)
+makeDependencyGraph knownTypes statements =
+    List.foldl (graphHelper knownTypes) Dict.empty statements
 
 
-   traversal st graph =
-       case st of
-           TypeDeclaration typename typeDef ->
-               let
-                   name =
-                       getTypeName typename
-               in
-                   Dict.update name (updateDependencies <| getDependencies Set.empty typeDef) graph
+graphHelper : Set.Set String -> Statement -> Dict.Dict String (Set.Set String) -> Dict.Dict String (Set.Set String)
+graphHelper knownTypes stmt =
+    case stmt of
+        TypeDeclaration typeName _ ->
+            let
+                name =
+                    getTypeName typeName
+            in
+                Dict.update name (updateDependencies <| getDependencies knownTypes stmt)
 
-           TypeAliasDeclaration typename typeDef ->
-               let
-                   name =
-                       getTypeName typename
-               in
-                   Dict.update name (updateDependencies <| getDependencies Set.empty typeDef) graph
+        TypeAliasDeclaration typeName _ ->
+            let
+                name =
+                    getTypeName typeName
+            in
+                Dict.update name (updateDependencies <| getDependencies knownTypes stmt)
 
-           _ ->
-               graph
--}
+        _ ->
+            Debug.crash "Unsupported type"
 
 
 setdiff =
@@ -83,19 +82,13 @@ traverseType knownTypes type_ useQualType =
                 Debug.crash "Unsupported type"
 
 
-
-{- | TypeVariable Name
-   | TypeRecordConstructor Type (List (Name, Type))
-   | TypeRecord (List (Name, Type))
-   | TypeTuple (List Type)
-   | TypeApplication Type Type
--}
-
-
 updateDependencies newValues oldValues =
     case oldValues of
         Nothing ->
-            newValues
+            if Set.size newValues > 0 then
+                Just newValues
+            else
+                Nothing
 
         Just oldValues ->
-            Set.union oldValues newValues
+            Just <| Set.union oldValues newValues

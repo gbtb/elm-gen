@@ -38,11 +38,11 @@ suite =
                 [ test "for 2 simple union types" <|
                     \_ ->
                         Expect.equal
-                            (makeDependencyGraph
+                            (makeDependencyGraph knownTypes
                                 [ TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "Trivial" ] [], TypeConstructor [ "Cons1" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "Cons2" ] ([ TypeTuple ([ TypeConstructor [ "List" ] ([ TypeConstructor [ "String" ] [] ]) ]) ]) ])
                                 , TypeAliasDeclaration (TypeConstructor [ "Record" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "List" ] ([ TypeConstructor [ "Float" ] [] ]) ), ( "field2", TypeConstructor [ "Basic" ] [] ) ]))
                                 ]
                             )
-                            (Dict.fromList [ ( "Record", [ "Basic" ] ) ])
+                            (Dict.fromList [ ( "Record", Set.fromList [ "Basic" ] ) ])
                 ]
             ]
