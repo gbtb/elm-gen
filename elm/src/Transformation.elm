@@ -230,12 +230,3 @@ getMapFun n =
 
         x ->
             "map" ++ (toString x)
-
-
-getTypeName t =
-    case t of
-        TypeConstructor [ name ] [] ->
-            name
-
-        _ ->
-            Debug.crash "Cannot extract typeName!"
