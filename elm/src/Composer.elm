@@ -6,22 +6,30 @@ import Ast.Statement exposing (..)
 import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
+import Dependency exposing (..)
 import List.Extra as List
 import Set
+import Dict
 import Utils exposing (..)
 
 
 composeFile : List Statement -> String
 composeFile statements =
     let
-        records =
-            List.filter recordsFilter statements
+        types =
+            List.filter typesFilter statements
 
         moduleDeclaration =
             List.find moduleDeclarationFilter statements |> fromJust "Cannot find module declaration!"
 
         moduleName =
             getModuleName moduleDeclaration
+
+        dependencyGraph =
+            makeDependencyGraph knownTypes types
+
+        typesDict =
+            makeTypesDict types
     in
         String.join "\n" <|
             List.map (produceString 4) <|
@@ -30,7 +38,9 @@ composeFile statements =
                 ]
                     ++ printImports moduleName (getTypes statements)
                     ++ [ emptyLine, emptyLine ]
-                    ++ printDecoders records
+                    ++ printDecoders typesDict
+                        dependencyGraph
+                        (Dict.keys dependencyGraph |> List.head |> fromJust "File has no types to made decoders for!")
                     ++ [ emptyLine ]
 
 
@@ -46,8 +56,29 @@ getTypes =
         )
 
 
-printDecoders records =
-    List.concatMap (genDecoder defaultContext) records |> List.map printStatement
+
+--printDecoders graph types
+
+
+makeTypesDict types =
+    List.foldl (\item accumDict -> Dict.insert (getTypeNameFromStatement item) item accumDict) Dict.empty types
+
+
+printDecoders typesDict graph key =
+    List.map (printStatement) <| List.concat <| printDecodersHelper typesDict graph key []
+
+
+printDecodersHelper typesDict graph item decodersList =
+    let
+        dfsDecoders =
+            Set.foldl (printDecodersHelper typesDict graph) [] <| fromJust "Types set not found in deps graph" <| Dict.get item graph
+    in
+        decodersList ++ dfsDecoders ++ [ genDecoder defaultContext <| fromJust "Type not found in types dict!" <| Dict.get item typesDict ]
+
+
+
+--printDecoders types =
+--    List.concatMap (genDecoder defaultContext) types |> List.map printStatement
 
 
 getModuleName s =
@@ -82,9 +113,12 @@ makeDecodersModuleDecl stmt =
             Debug.crash "Incorrect statement kind was passed!"
 
 
-recordsFilter s =
+typesFilter s =
     case s of
         TypeAliasDeclaration (TypeConstructor [ consName ] []) (TypeRecord r) ->
+            True
+
+        TypeDeclaration _ _ ->
             True
 
         _ ->

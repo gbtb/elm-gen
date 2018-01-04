@@ -44,5 +44,15 @@ suite =
                                 ]
                             )
                             (Dict.fromList [ ( "Record", Set.fromList [ "Basic" ] ) ])
+                , test "for 3 simple types" <|
+                    \_ ->
+                        Expect.equal
+                            (makeDependencyGraph knownTypes
+                                [ TypeDeclaration (TypeConstructor [ "A" ] []) ([ TypeConstructor [ "A" ] [] ])
+                                , TypeDeclaration (TypeConstructor [ "B" ] []) ([ TypeConstructor [ "B" ] ([ TypeConstructor [ "A" ] [] ]) ])
+                                , TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ]))
+                                ]
+                            )
+                            (Dict.fromList [ ( "B", Set.fromList [ "A" ] ), ( "C", Set.fromList [ "B", "A" ] ) ])
                 ]
             ]

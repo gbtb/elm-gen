@@ -8,6 +8,11 @@ import Set
 import Utils exposing (..)
 
 
+knownTypes : Set.Set String
+knownTypes =
+    Set.fromList [ "Bool", "Int", "Float", "String", "List", "Array" ]
+
+
 makeDependencyGraph : Set.Set String -> List Statement -> Dict.Dict String (Set.Set String)
 makeDependencyGraph knownTypes statements =
     List.foldl (graphHelper knownTypes) Dict.empty statements

@@ -21,3 +21,15 @@ getTypeName t =
 
         _ ->
             Debug.crash "Cannot extract typeName!"
+
+
+getTypeNameFromStatement st =
+    case st of
+        TypeAliasDeclaration typeName _ ->
+            getTypeName typeName
+
+        TypeDeclaration typeName _ ->
+            getTypeName typeName
+
+        _ ->
+            Debug.crash "Cannot extract typeName"
