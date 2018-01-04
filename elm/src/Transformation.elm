@@ -10,31 +10,27 @@ import Utils exposing (..)
 
 type alias TransformationContext =
     { decoderPrefix : String
-    , knownTypes : Set.Set String
-    , templatesForTc : Dict.Dict String (Expression -> Expression)
+    , knownTypes : Dict.Dict String (List String)
     }
 
 
 defaultContext =
-    { decoderPrefix = "JD"
-    , knownTypes = Set.fromList [ "int", "float", "string", "list", "array", "char", "bool" ]
-    , templatesForTc =
-        Dict.fromList
-            [ ( "maybe"
-              , (\x ->
-                    Application
-                        (Access (Variable [ "JD" ]) [ "oneOf" ])
-                        (List
-                            ([ Application (Access (Variable [ "JD" ]) [ "null" ]) (Variable [ "Nothing" ])
-                             , Application (Application (Access (Variable [ "JD" ]) [ "map" ]) (Variable [ "Just" ]))
-                                (x)
-                             ]
-                            )
-                        )
-                )
-              )
-            ]
-    }
+    initContext "JD" Dict.empty
+
+
+initContext prefix userDefinedTypes =
+    let
+        basicTypes =
+            [ "Int", "Float", "String", "List", "Array", "Char", "Bool" ]
+
+        basicTypesDecoders =
+            basicTypes
+                |> List.map (\type_ -> ( type_, qualifiedName prefix (String.toLower type_) ))
+                |> Dict.fromList
+    in
+        { decoderPrefix = prefix
+        , knownTypes = basicTypesDecoders |> Dict.union userDefinedTypes
+        }
 
 
 genDecoder : TransformationContext -> Statement -> List Statement
@@ -56,6 +52,24 @@ genDecoder context stmt =
             in
                 [ FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
                 , FunctionDeclaration (decoderName) [] <| genDecoderForRecord context typeName rightPart
+                ]
+
+        TypeDeclaration leftPart rightPart ->
+            let
+                typeName =
+                    getTypeName leftPart
+
+                decoderName =
+                    String.toLower typeName ++ "Decoder"
+
+                decoderType =
+                    if String.length context.decoderPrefix > 0 then
+                        [ context.decoderPrefix, "Decoder" ]
+                    else
+                        [ "Decoder" ]
+            in
+                [ FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
+                , FunctionDeclaration (decoderName) [] <| genDecoderForUnionType context stmt
                 ]
 
         _ ->
@@ -148,14 +162,7 @@ recordFieldDec ctx ( name, type_ ) =
 decodeType ctx type_ =
     case type_ of
         TypeConstructor [ typeName ] argsTypes ->
-            let
-                typeName_ =
-                    String.toLower typeName
-            in
-                if Set.member typeName_ ctx.knownTypes then
-                    decodeKnownTypeConstructor ctx typeName_ argsTypes
-                else
-                    useTemplateDecoder ctx typeName_ argsTypes
+            decodeKnownTypeConstructor ctx typeName argsTypes
 
         TypeTuple [ a ] ->
             (decodeType ctx a)
@@ -179,28 +186,26 @@ decodeType ctx type_ =
             Debug.crash "Not allowed type in recordField"
 
 
-useTemplateDecoder ctx typeName_ argsTypes =
-    let
-        expr =
-            case argsTypes of
-                [] ->
-                    Debug.crash "Empty args list for complex type constructor"
-
-                [ t ] ->
-                    decodeType ctx t
-
-                h :: cons ->
-                    List.foldl (\item accum -> Application accum (decodeType ctx item)) (decodeType ctx h) cons
-    in
-        Dict.get typeName_ ctx.templatesForTc
-            |> Maybe.map (\f -> f expr)
-            |> fromJust ("Cannot decode this type: " ++ typeName_)
+genMaybeDecoder =
+    FunctionDeclaration "maybeDecoder"
+        ([ Variable [ "decoder" ] ])
+        (Application
+            (Access (Variable [ "JD" ]) [ "oneOf" ])
+            (List
+                ([ Application (Access (Variable [ "JD" ]) [ "null" ]) (Variable [ "Nothing" ])
+                 , Application (Application (Access (Variable [ "JD" ]) [ "map" ]) (Variable [ "Just" ])) (Variable [ "decoder" ])
+                 ]
+                )
+            )
+        )
 
 
 decodeKnownTypeConstructor ctx typeName argsTypes =
     let
         firstType =
-            variable ctx.decoderPrefix typeName
+            Dict.get typeName ctx.knownTypes
+                |> fromJust ("Unknown type somehow leaked to transformation stage." ++ typeName)
+                |> Variable
     in
         case argsTypes of
             [] ->

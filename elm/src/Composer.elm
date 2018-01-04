@@ -3,7 +3,7 @@ module Composer exposing (..)
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
-import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext)
+import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
@@ -11,6 +11,13 @@ import List.Extra as List
 import Set
 import Dict
 import Utils exposing (..)
+
+
+type alias LocalContext =
+    { typesDict : Dict.Dict String Statement
+    , graph : Dict.Dict String (Set.Set String)
+    , userDefinedTypes : Dict.Dict String (List String)
+    }
 
 
 composeFile : List Statement -> String
@@ -25,11 +32,17 @@ composeFile statements =
         moduleName =
             getModuleName moduleDeclaration
 
-        dependencyGraph =
+        ( graphHeads, dependencyGraph ) =
             makeDependencyGraph knownTypes types
 
         typesDict =
             makeTypesDict types
+
+        userDefinedTypes =
+            Dict.values dependencyGraph
+                |> List.foldl Set.union Set.empty
+                |> Set.toList
+                |> makeDecodersNameMapping
     in
         String.join "\n" <|
             List.map (produceString 4) <|
@@ -37,18 +50,30 @@ composeFile statements =
                 , emptyLine
                 ]
                     ++ printImports moduleName (getTypes statements)
-                    ++ [ emptyLine, emptyLine ]
-                    ++ printDecoders typesDict
-                        dependencyGraph
-                        (Dict.keys dependencyGraph |> List.head |> fromJust "File has no types to made decoders for!")
+                    ++ (traverseDepGraphAndPrintDecoders
+                            (LocalContext typesDict
+                                dependencyGraph
+                                userDefinedTypes
+                            )
+                            graphHeads
+                       )
                     ++ [ emptyLine ]
+
+
+traverseDepGraphAndPrintDecoders context graphHeads =
+    List.concatMap
+        (\head -> printDecoders context head)
+        (Set.toList graphHeads)
 
 
 getTypes =
     List.filterMap
         (\s ->
             case s of
-                TypeAliasDeclaration (TypeConstructor [ consName ] []) (TypeRecord r) ->
+                TypeAliasDeclaration (TypeConstructor [ consName ] []) _ ->
+                    Just <| (flip TypeExport) Nothing consName
+
+                TypeDeclaration (TypeConstructor [ consName ] []) _ ->
                     Just <| (flip TypeExport) Nothing consName
 
                 _ ->
@@ -64,21 +89,40 @@ makeTypesDict types =
     List.foldl (\item accumDict -> Dict.insert (getTypeNameFromStatement item) item accumDict) Dict.empty types
 
 
-printDecoders typesDict graph key =
-    List.map (printStatement) <| List.concat <| printDecodersHelper typesDict graph key []
+makeDecodersNameMapping types =
+    List.map (\type_ -> ( type_, [ String.toLower type_ ++ "Decoder" ] )) types |> Dict.fromList
 
 
-printDecodersHelper typesDict graph item decodersList =
+printDecoders localContext key =
+    let
+        listOfDecoders =
+            printDecodersHelper localContext key
+
+        printedDecoders =
+            List.map (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) listOfDecoders
+    in
+        List.concat printedDecoders
+
+
+printDecodersHelper : LocalContext -> String -> List (List Statement)
+printDecodersHelper localContext item =
     let
         dfsDecoders =
-            Set.foldl (printDecodersHelper typesDict graph) [] <| fromJust "Types set not found in deps graph" <| Dict.get item graph
+            Set.foldl
+                (\key list -> List.append list <| printDecodersHelper localContext key)
+                []
+            <|
+                fromJust ("Types set not found in deps graph: " ++ item) <|
+                    Dict.get item localContext.graph
     in
-        decodersList ++ dfsDecoders ++ [ genDecoder defaultContext <| fromJust "Type not found in types dict!" <| Dict.get item typesDict ]
-
-
-
---printDecoders types =
---    List.concatMap (genDecoder defaultContext) types |> List.map printStatement
+        dfsDecoders
+            ++ [ if item == "Maybe" then
+                    [ genMaybeDecoder ]
+                 else
+                    genDecoder (Transformation.initContext "JD" localContext.userDefinedTypes) <|
+                        fromJust "Type not found in types dict!" <|
+                            Dict.get item localContext.typesDict
+               ]
 
 
 getModuleName s =

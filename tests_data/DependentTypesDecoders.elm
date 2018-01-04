@@ -18,6 +18,5 @@ basicDecoder =
 recordDecoder : JD.Decoder Record
 recordDecoder =
     JD.decode Record
-        |> JD.required "field1"
-            (JD.list JD.float)
+        |> JD.required "field1" (JD.list JD.float)
         |> JD.required "field2" basicDecoder

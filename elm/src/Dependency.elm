@@ -13,30 +13,45 @@ knownTypes =
     Set.fromList [ "Bool", "Int", "Float", "String", "List", "Array" ]
 
 
-makeDependencyGraph : Set.Set String -> List Statement -> Dict.Dict String (Set.Set String)
+makeDependencyGraph : Set.Set String -> List Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) )
 makeDependencyGraph knownTypes statements =
-    List.foldl (graphHelper knownTypes) Dict.empty statements
+    List.foldl (graphHelper knownTypes) ( Set.empty, Dict.empty ) statements
 
 
-graphHelper : Set.Set String -> Statement -> Dict.Dict String (Set.Set String) -> Dict.Dict String (Set.Set String)
-graphHelper knownTypes stmt =
-    case stmt of
-        TypeDeclaration typeName _ ->
-            let
-                name =
-                    getTypeName typeName
-            in
-                Dict.update name (updateDependencies <| getDependencies knownTypes stmt)
+graphHelper : Set.Set String -> Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) ) -> ( Set.Set String, Dict.Dict String (Set.Set String) )
+graphHelper knownTypes stmt ( heads, graph ) =
+    let
+        retrievedDeps =
+            getDependencies knownTypes stmt
 
-        TypeAliasDeclaration typeName _ ->
-            let
-                name =
-                    getTypeName typeName
-            in
-                Dict.update name (updateDependencies <| getDependencies knownTypes stmt)
+        updateGraphIfMaybe =
+            if Set.member "Maybe" retrievedDeps then
+                Dict.insert "Maybe" Set.empty
+            else
+                identity
+    in
+        case stmt of
+            TypeDeclaration typeName _ ->
+                let
+                    name =
+                        getTypeName typeName
+                in
+                    ( Set.diff (Set.insert name heads) retrievedDeps
+                    , Dict.update name (updateDependencies retrievedDeps) graph |> updateGraphIfMaybe
+                    )
 
-        _ ->
-            Debug.crash "Unsupported type"
+            TypeAliasDeclaration typeName _ ->
+                let
+                    name =
+                        getTypeName typeName
+                in
+                    ( Set.diff (Set.insert name heads) retrievedDeps
+                    , Dict.update name (updateDependencies retrievedDeps) graph
+                        |> updateGraphIfMaybe
+                    )
+
+            _ ->
+                Debug.crash "Unsupported type"
 
 
 setdiff =
@@ -90,10 +105,7 @@ traverseType knownTypes type_ useQualType =
 updateDependencies newValues oldValues =
     case oldValues of
         Nothing ->
-            if Set.size newValues > 0 then
-                Just newValues
-            else
-                Nothing
+            Just newValues
 
         Just oldValues ->
             Just <| Set.union oldValues newValues

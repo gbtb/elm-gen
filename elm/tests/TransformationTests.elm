@@ -7,13 +7,14 @@ import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 import Transformation exposing (..)
 import Set
+import Dict
 
 
 suite : Test
 suite =
     let
         context =
-            { defaultContext | decoderPrefix = "" }
+            initContext "" Dict.empty
     in
         describe "Ast transformation"
             [ describe "Multiple fields"

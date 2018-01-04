@@ -43,7 +43,7 @@ suite =
                                 , TypeAliasDeclaration (TypeConstructor [ "Record" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "List" ] ([ TypeConstructor [ "Float" ] [] ]) ), ( "field2", TypeConstructor [ "Basic" ] [] ) ]))
                                 ]
                             )
-                            (Dict.fromList [ ( "Record", Set.fromList [ "Basic" ] ) ])
+                            ( Set.fromList [ "Record" ], Dict.fromList [ ( "Record", Set.fromList [ "Basic" ] ), ( "Basic", Set.empty ) ] )
                 , test "for 3 simple types" <|
                     \_ ->
                         Expect.equal
@@ -53,6 +53,6 @@ suite =
                                 , TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ]))
                                 ]
                             )
-                            (Dict.fromList [ ( "B", Set.fromList [ "A" ] ), ( "C", Set.fromList [ "B", "A" ] ) ])
+                            ( Set.fromList [ "C" ], Dict.fromList [ ( "B", Set.fromList [ "A" ] ), ( "C", Set.fromList [ "B", "A" ] ), ( "A", Set.empty ) ] )
                 ]
             ]
