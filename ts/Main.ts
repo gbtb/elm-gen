@@ -19,12 +19,16 @@ if (!args._ ||  args._.length != 4){
     const outFileName = `${inputFileName}Decoders.elm`;
 
     outPath = path.join(outPath, outFileName);
-    console.log(`Writing output to file: ${outPath}`);
 
     const Elm =  require("../elm/src/Main.elm");
     const app = Elm.Main.worker();
-    app.ports.output.subscribe(function (string: String) {
+    app.ports.output.subscribe((string: String) => {
+        console.log(`Writing output to file: ${outPath}`);
         fs.writeFileSync(outPath, string);
+    });
+
+    app.ports.logMessage.subscribe((msg: String) => {
+        console.log(msg);
     });
 
     const fileContent: string = fs.readFileSync(inputPath, {encoding: 'utf-8'});

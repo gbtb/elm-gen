@@ -20,42 +20,57 @@ import Ast.Statement exposing (..)
 import Transformation exposing (genDecoderForRecord, genDecoder)
 import Printer exposing (printStatement)
 import List.Extra as List
-import Composer exposing (composeFile)
+import Composer exposing (generate, composeFile)
 import PrintRepr exposing (produceString, (+>), PrintRepr(..))
-
-
-type alias Model =
-    { string : String
-    }
+import Utils exposing (..)
+import Set
+import Dict
+import Task
+import Model exposing (..)
 
 
 type Msg
-    = AddString String
+    = Parse String
+    | Generate
+    | Print
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        AddString string ->
+        Parse string ->
             let
-                ast =
+                parsedStatements =
                     parseModule operators string
             in
-                ( model
-                , output <|
-                    case ast of
-                        Err _ ->
-                            Debug.crash "Failed to parse module!"
+                ( { model
+                    | parsedStatements =
+                        case parsedStatements of
+                            Err _ ->
+                                Debug.crash "Failed to parse module!"
 
-                        Ok ( _, _, statements ) ->
-                            --Debug.crash (toString statements)
-                            composeFile statements
+                            Ok ( _, _, statements ) ->
+                                statements
+                  }
+                , Cmd.batch [ logMessage "Parsing files...", makeCmd Generate ]
                 )
+
+        Generate ->
+            ( generate model
+            , Cmd.batch [ logMessage "Parsing is complete, all required types are loaded...", logMessage "Generating decoders...", makeCmd Print ]
+            )
+
+        Print ->
+            let
+                fileContent =
+                    composeFile model
+            in
+                ( model, Cmd.batch [ logMessage "Printing...", output fileContent ] )
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    input AddString
+    input Parse
 
 
 {-| Main func as it is
@@ -63,13 +78,19 @@ subscriptions _ =
 main : Program Never Model Msg
 main =
     program
-        { init = ( { string = "" }, Cmd.none )
+        { init = ( initModel, Cmd.none )
         , update = update
         , subscriptions = subscriptions
         }
 
 
 port output : String -> Cmd msg
+
+
+port logMessage : String -> Cmd msg
+
+
+port errorMessage : String -> Cmd msg
 
 
 port input : (String -> msg) -> Sub msg

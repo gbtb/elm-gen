@@ -3,6 +3,7 @@ module Utils exposing (..)
 import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
+import Task
 
 
 fromJust err m =
@@ -33,3 +34,7 @@ getTypeNameFromStatement st =
 
         _ ->
             Debug.crash "Cannot extract typeName"
+
+
+makeCmd =
+    Task.perform identity << Task.succeed
