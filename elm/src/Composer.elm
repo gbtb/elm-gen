@@ -21,6 +21,50 @@ type alias GenContext =
     }
 
 
+makeFileLoadRequest : Model -> Result String (List (List String))
+makeFileLoadRequest model =
+    let
+        imports =
+            List.filter importsFilter model.parsedStatements
+
+        ( unknownTypes, filesList ) =
+            List.foldl importFoldHelper ( model.unknownTypes, [] ) imports
+    in
+        if not <| Set.isEmpty unknownTypes then
+            Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList unknownTypes) ++ "] in import statements!"
+        else
+            Ok <| List.reverse filesList
+
+
+resolveDependencies : Model -> Model
+resolveDependencies model =
+    let
+        types =
+            List.filter typesFilter model.parsedStatements
+
+        ( graphHeads, graph ) =
+            makeDependencyGraph knownTypes types
+
+        typesDict =
+            makeTypesDict types
+
+        userDefinedTypes =
+            Dict.values graph
+                |> List.foldl Set.union Set.empty
+
+        unknownTypes =
+            Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict)
+
+        ( oldGraphHeads, oldGraph ) =
+            model.dependencies
+    in
+        { model
+            | typesDict = Dict.union model.typesDict typesDict
+            , unknownTypes = Set.union model.unknownTypes unknownTypes
+            , dependencies = ( Set.union oldGraphHeads graphHeads, Dict.union oldGraph graph )
+        }
+
+
 generate : Model -> Model
 generate model =
     let
@@ -141,6 +185,48 @@ getModuleName s =
             Debug.crash "Not a module name!"
 
 
+importFoldHelper : Statement -> ( Set.Set String, List (List String) ) -> ( Set.Set String, List (List String) )
+importFoldHelper importStmt ( unknownTypes, filesList ) =
+    let
+        defaultReturn =
+            ( unknownTypes, filesList )
+    in
+        if Set.isEmpty unknownTypes then
+            defaultReturn
+        else
+            case importStmt of
+                ImportStatement moduleName _ mbExportSet ->
+                    case mbExportSet of
+                        Just exportSet ->
+                            let
+                                importedTypes =
+                                    Set.fromList <| getImportedTypes exportSet
+                            in
+                                if not <| Set.isEmpty <| Set.intersect importedTypes unknownTypes then
+                                    ( Set.diff unknownTypes importedTypes, moduleName :: filesList )
+                                else
+                                    defaultReturn
+
+                        Nothing ->
+                            defaultReturn
+
+                _ ->
+                    Debug.crash "Non-import statement passed to function!"
+
+
+getImportedTypes : ExportSet -> List String
+getImportedTypes exportSet =
+    case exportSet of
+        SubsetExport listOfExports ->
+            List.foldl (\exp list -> list ++ getImportedTypes exp) [] listOfExports
+
+        TypeExport typeName _ ->
+            [ typeName ]
+
+        _ ->
+            []
+
+
 printImports sourceModuleName importedTypes =
     [ ImportStatement [ "Json", "Decode" ] (Just "JD") (Nothing)
     , ImportStatement [ "Json", "Decode", "Pipeline" ] (Just "JD") (Nothing)
@@ -177,7 +263,21 @@ typesFilter s =
 
 
 moduleDeclarationFilter s =
-    True
+    case s of
+        ModuleDeclaration m _ ->
+            True
+
+        _ ->
+            False
+
+
+importsFilter s =
+    case s of
+        ImportStatement _ _ _ ->
+            True
+
+        _ ->
+            False
 
 
 emptyLine =

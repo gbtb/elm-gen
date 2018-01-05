@@ -6,7 +6,9 @@ import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 import Composer exposing (..)
+import Model exposing (..)
 import Dict
+import Set
 
 
 suite : Test
@@ -32,4 +34,20 @@ suite =
                         , ( "C", TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ])) )
                         ]
                     )
+        , test "can form request for files to load types declarations" <|
+            \_ ->
+                Expect.equal
+                    (makeFileLoadRequest
+                        ({ initModel
+                            | parsedStatements =
+                                [ ImportStatement [ "Module1" ] Nothing (Just (SubsetExport ([ TypeExport "Type1" Nothing ])))
+                                , ImportStatement [ "Module2" ] Nothing (Just (SubsetExport ([ TypeExport "Type2" (Just AllExport), TypeExport "Type3" (Just (SubsetExport ([ FunctionExport "A" ]))) ])))
+                                , ImportStatement [ "Rel", "Module3" ] Nothing (Just (SubsetExport ([ TypeExport "Type4" Nothing ])))
+                                , ImportStatement [ "Module4" ] Nothing (Just (AllExport))
+                                ]
+                            , unknownTypes = Set.fromList [ "Type1", "Type2", "Type3", "Type4" ]
+                         }
+                        )
+                    )
+                    (Ok [ [ "Module1" ], [ "Module2" ], [ "Rel", "Module3" ] ])
         ]

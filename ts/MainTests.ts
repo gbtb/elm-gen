@@ -72,5 +72,5 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     ).to.equal(
       readFile(dataPath("DependentOnOtherFileDecoders.elm"))
     );
-  })
+  });
 })
