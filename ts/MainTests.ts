@@ -62,5 +62,15 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     ).to.equal(
       readFile(dataPath("DependentTypesDecoders.elm"))
     );
+  });
+
+  it('for types splitted into two files' , () => {
+    shell.cd('dist');
+    shell.exec("./elm-gen ../tests_data/DependentOnOtherFile.elm .");
+    expect(
+      readFile(outPath("DependentOnOtherFileDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("DependentOnOtherFileDecoders.elm"))
+    );
   })
 })
