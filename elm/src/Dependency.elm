@@ -10,16 +10,23 @@ import Utils exposing (..)
 
 knownTypes : Set.Set String
 knownTypes =
-    Set.fromList [ "Bool", "Int", "Float", "String", "List", "Array" ]
+    Set.fromList [ "Bool", "Char", "Int", "Float", "String", "List", "Array" ]
 
 
-makeDependencyGraph : Set.Set String -> List Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) )
-makeDependencyGraph knownTypes statements =
-    List.foldl (graphHelper knownTypes) ( Set.empty, Dict.empty ) statements
+makeDependencyGraph : Set.Set String -> Set.Set String -> List Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) )
+makeDependencyGraph nonHeads knownTypes statements =
+    let
+        ( nonHeads_, graph ) =
+            List.foldl (graphHelper knownTypes) ( nonHeads, Dict.empty ) statements
+    in
+        ( Set.diff (Set.fromList <| Dict.keys graph) nonHeads_, graph )
 
 
-graphHelper : Set.Set String -> Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) ) -> ( Set.Set String, Dict.Dict String (Set.Set String) )
-graphHelper knownTypes stmt ( heads, graph ) =
+
+--graphHelper : Set.Set String -> Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) ) -> ( Set.Set String, Dict.Dict String (Set.Set String) )
+
+
+graphHelper knownTypes stmt ( nonHeads, graph ) =
     let
         retrievedDeps =
             getDependencies knownTypes stmt
@@ -36,7 +43,7 @@ graphHelper knownTypes stmt ( heads, graph ) =
                     name =
                         getTypeName typeName
                 in
-                    ( Set.diff (Set.insert name heads) retrievedDeps
+                    ( Set.union nonHeads retrievedDeps
                     , Dict.update name (updateDependencies retrievedDeps) graph |> updateGraphIfMaybe
                     )
 
@@ -45,7 +52,7 @@ graphHelper knownTypes stmt ( heads, graph ) =
                     name =
                         getTypeName typeName
                 in
-                    ( Set.diff (Set.insert name heads) retrievedDeps
+                    ( Set.union nonHeads retrievedDeps
                     , Dict.update name (updateDependencies retrievedDeps) graph
                         |> updateGraphIfMaybe
                     )

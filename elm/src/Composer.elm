@@ -40,13 +40,23 @@ resolveDependencies : Model -> Model
 resolveDependencies model =
     let
         types =
-            List.filter typesFilter model.parsedStatements
-
-        ( graphHeads, graph ) =
-            makeDependencyGraph knownTypes types
+            List.filter typesFilter <|
+                if List.length model.newlyParsedStatements > 0 then
+                    model.newlyParsedStatements
+                else
+                    model.parsedStatements
 
         typesDict =
-            makeTypesDict types
+            Dict.union model.typesDict <| makeTypesDict types
+
+        ( oldGraphHeads, oldGraph ) =
+            model.dependencies
+
+        ( newGraphHeads, newGraph ) =
+            makeDependencyGraph (List.foldl Set.union Set.empty <| Dict.values oldGraph) knownTypes types
+
+        ( graphHeads, graph ) =
+            ( Set.union newGraphHeads oldGraphHeads, Dict.union oldGraph newGraph )
 
         userDefinedTypes =
             Dict.values graph
@@ -54,31 +64,23 @@ resolveDependencies model =
 
         unknownTypes =
             Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict)
-
-        ( oldGraphHeads, oldGraph ) =
-            model.dependencies
     in
         { model
-            | typesDict = Dict.union model.typesDict typesDict
-            , unknownTypes = Set.union model.unknownTypes unknownTypes
-            , dependencies = ( Set.union oldGraphHeads graphHeads, Dict.union oldGraph graph )
+            | typesDict = typesDict
+            , unknownTypes = unknownTypes
+            , dependencies = ( graphHeads, graph )
+            , newlyParsedStatements = []
         }
 
 
 generate : Model -> Model
 generate model =
     let
-        types =
-            List.filter typesFilter model.parsedStatements
-
         moduleDeclaration =
             List.find moduleDeclarationFilter model.parsedStatements |> fromJust "Cannot find module declaration!"
 
         ( graphHeads, graph ) =
-            makeDependencyGraph knownTypes types
-
-        typesDict =
-            makeTypesDict types
+            model.dependencies
 
         userDefinedTypes =
             Dict.values graph
@@ -90,7 +92,7 @@ generate model =
             | moduleDeclaration = moduleDeclaration
             , generatedDecoders =
                 traverseDepGraphAndGenerateDecoders
-                    (GenContext typesDict
+                    (GenContext model.typesDict
                         graph
                         userDefinedTypes
                     )

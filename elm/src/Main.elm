@@ -20,7 +20,7 @@ import Ast.Statement exposing (..)
 import Transformation exposing (genDecoderForRecord, genDecoder)
 import Printer exposing (printStatement)
 import List.Extra as List
-import Composer exposing (generate, composeFile, resolveDependencies)
+import Composer exposing (generate, composeFile, resolveDependencies, makeFileLoadRequest)
 import PrintRepr exposing (produceString, (+>), PrintRepr(..))
 import Utils exposing (..)
 import Set
@@ -107,7 +107,7 @@ main =
 port output : String -> Cmd msg
 
 
-port requestFile : List String -> Cmd msg
+port requestFile : List (List String) -> Cmd msg
 
 
 port logMessage : String -> Cmd msg

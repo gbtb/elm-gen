@@ -10,6 +10,7 @@ import Ast.Statement exposing (..)
 type alias Model =
     { inputFileContent : String
     , parsedStatements : List Statement
+    , newlyParsedStatements : List Statement
     , unknownTypes : Set.Set String
     , typesDict : Dict.Dict String Statement
     , dependencies : ( Set.Set String, Dict.Dict String (Set.Set String) )
@@ -21,6 +22,7 @@ type alias Model =
 initModel =
     { inputFileContent = ""
     , parsedStatements = []
+    , newlyParsedStatements = []
     , unknownTypes = Set.empty
     , typesDict = Dict.empty
     , dependencies = ( Set.empty, Dict.empty )
