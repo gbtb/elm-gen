@@ -55,3 +55,17 @@ extractDecoder s =
 
         _ ->
             Nothing
+
+
+extractDecoderName s =
+    case s of
+        FunctionTypeDeclaration name type_ ->
+            case type_ of
+                TypeConstructor [ "JD", "Decoder" ] [ TypeConstructor [ typeName ] [] ] ->
+                    Just name
+
+                _ ->
+                    Nothing
+
+        _ ->
+            Nothing

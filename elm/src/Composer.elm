@@ -8,6 +8,7 @@ import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
 import List.Extra as List
+import Maybe.Extra as Maybe
 import Set
 import Dict
 import Utils exposing (..)
@@ -60,16 +61,20 @@ resolveDependencies model =
                 else
                     model.parsedStatements
 
+        decodersDict =
+            Debug.log "" <| makeDecodersDict decoders
+
         moduleName =
             List.find (extractModuleDeclaration >> asFilter) model.parsedStatements
                 |> Maybe.andThen extractModuleDeclaration
                 |> fromJust "Module declaration not found!"
 
         importsDict =
-            Dict.fromList [ ( moduleName, Set.fromList <| getTypes unknownTypes model.parsedStatements ) ]
+            Dict.fromList [ ( moduleName, Set.fromList <| getTypes decodersDict unknownTypes model.parsedStatements ) ]
 
         typesDict =
-            Dict.union model.typesDict <| makeTypesDict types
+            Dict.union model.typesDict <|
+                Dict.union (decodersDict) (makeTypesDict types)
 
         ( oldGraphHeads, oldGraph ) =
             model.dependencies
@@ -148,22 +153,41 @@ printDecoders decoders =
     List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
-getTypes unknownTypes =
+getTypes : Dict.Dict String Statement -> Set.Set String -> List Statement -> List String
+getTypes decoders unknownTypes =
     List.filterMap
         (\s ->
             extractType s
                 |> Maybe.andThen
                     (\consName ->
-                        if Set.member consName unknownTypes then
-                            Nothing
-                        else
-                            Just consName
+                        Dict.get consName decoders
+                            |> Maybe.andThen extractDecoderName
+                            |> Maybe.orElse
+                                (if Set.member consName unknownTypes then
+                                    Nothing
+                                 else
+                                    Just consName
+                                )
                     )
         )
 
 
 makeTypesDict types =
     List.foldl (\item accumDict -> Dict.insert (getTypeNameFromStatement item) item accumDict) Dict.empty types
+
+
+makeDecodersDict decoders =
+    List.foldl
+        (\item accumDict ->
+            case extractDecoder item of
+                Just decodedType ->
+                    Dict.insert decodedType item accumDict
+
+                Nothing ->
+                    accumDict
+        )
+        Dict.empty
+        decoders
 
 
 makeDecodersNameMapping types =
@@ -175,17 +199,27 @@ generateDecoders genContext graphHeads =
         typesList =
             Set.toList <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
     in
-        List.map (generateDecodersHelper genContext) typesList
+        List.map (generateDecodersHelper genContext) typesList |> Maybe.values
 
 
-generateDecodersHelper : GenContext -> String -> List Statement
+generateDecodersHelper : GenContext -> String -> Maybe (List Statement)
 generateDecodersHelper genContext item =
     if item == "Maybe" then
-        [ genMaybeDecoder ]
+        Just [ genMaybeDecoder ]
     else
-        genDecoder (Transformation.initContext "JD" genContext.userDefinedTypes) <|
-            fromJust "Type not found in types dict!" <|
+        let
+            typeDeclaration =
                 Dict.get item genContext.typesDict
+        in
+            case typeDeclaration of
+                Just stmt ->
+                    if (extractDecoder >> asFilter) stmt then
+                        Nothing
+                    else
+                        Just <| genDecoder (Transformation.initContext "JD" genContext.userDefinedTypes) stmt
+
+                Nothing ->
+                    Debug.log "Type not found in types dict!" <| Nothing
 
 
 importFoldHelper : Statement -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) ) -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) )

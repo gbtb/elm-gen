@@ -130,9 +130,8 @@ printList ctx exprList =
         [] ->
             Line 0 "[]"
 
-        [ a ] ->
-            prepend (Line 0 "[") (printExpression ctx a)
-
+        --[ a ] ->
+        --    prepend (Line 0 "[") (printExpression ctx a)
         h :: cons ->
             makeLines
                 (List.foldl (\accum item -> makeLines item accum)
