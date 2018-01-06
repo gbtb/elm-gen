@@ -164,7 +164,7 @@ makeTypesDict types =
 
 
 makeDecodersNameMapping types =
-    List.map (\type_ -> ( type_, [ String.toLower type_ ++ "Decoder" ] )) types |> Dict.fromList
+    List.map (\type_ -> ( type_, [ getDecoderName type_ ] )) types |> Dict.fromList
 
 
 generateDecoders genContext graphHeads =

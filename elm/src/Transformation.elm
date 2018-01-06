@@ -43,7 +43,7 @@ genDecoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    String.toLower typeName ++ "Decoder"
+                    getDecoderName typeName
 
                 decoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -236,12 +236,3 @@ getMapFun n =
 
         x ->
             "map" ++ (toString x)
-
-
-getDecoderName typeName =
-    case String.uncons typeName of
-        Just ( h, tail ) ->
-            String.cons (Char.toLower h) (tail ++ "Decoder")
-
-        Nothing ->
-            ""

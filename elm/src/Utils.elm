@@ -4,6 +4,7 @@ import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 import Task
+import Char
 
 
 fromJust err m =
@@ -38,3 +39,12 @@ getTypeNameFromStatement st =
 
 makeCmd =
     Task.perform identity << Task.succeed
+
+
+getDecoderName typeName =
+    case String.uncons typeName of
+        Just ( h, tail ) ->
+            String.cons (Char.toLower h) (tail ++ "Decoder")
+
+        Nothing ->
+            ""
