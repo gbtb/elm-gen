@@ -1,4 +1,4 @@
-module DependentOnOtherType exposing (..)
+module DependentOnOtherFile exposing (..)
 
 import DependentTypes exposing (Basic(..), Record(..))
 

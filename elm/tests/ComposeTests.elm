@@ -49,5 +49,11 @@ suite =
                          }
                         )
                     )
-                    (Ok [ [ "Module1" ], [ "Module2" ], [ "Rel", "Module3" ] ])
+                    (Ok <|
+                        Dict.fromList
+                            [ ( [ "Module1" ], Set.fromList [ "Type1" ] )
+                            , ( [ "Module2" ], Set.fromList [ "Type2", "Type3" ] )
+                            , ( [ "Rel", "Module3" ], Set.fromList [ "Type4" ] )
+                            ]
+                    )
         ]

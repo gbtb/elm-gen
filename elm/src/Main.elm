@@ -20,7 +20,7 @@ import Ast.Statement exposing (..)
 import Transformation exposing (genDecoderForRecord, genDecoder)
 import Printer exposing (printStatement)
 import List.Extra as List
-import Composer exposing (generate, composeFile, resolveDependencies, makeFileLoadRequest)
+import Composer exposing (generate, composeFile, resolveDependencies, makeFileLoadRequest, importsFilter)
 import PrintRepr exposing (produceString, (+>), PrintRepr(..))
 import Utils exposing (..)
 import Set
@@ -53,17 +53,22 @@ update msg model =
             let
                 new_model =
                     resolveDependencies model
+
+                imports =
+                    List.filter importsFilter model.parsedStatements
             in
                 if Set.isEmpty new_model.unknownTypes then
                     ( new_model, Cmd.batch [ logMessage "Parsing is complete, all required types are loaded...", makeCmd Generate ] )
                 else
                     let
-                        fileLoadRequest =
+                        importsDict =
                             makeFileLoadRequest new_model
                     in
-                        case fileLoadRequest of
-                            Ok req ->
-                                ( new_model, requestFiles req )
+                        case importsDict of
+                            Ok dict ->
+                                ( { new_model | importsDict = Dict.union new_model.importsDict dict }
+                                , requestFiles <| Dict.keys dict
+                                )
 
                             Err e ->
                                 ( new_model, errorMessage e )

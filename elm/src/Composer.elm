@@ -21,19 +21,19 @@ type alias GenContext =
     }
 
 
-makeFileLoadRequest : Model -> Result String (List (List String))
+makeFileLoadRequest : Model -> Result String (Dict.Dict (List String) TypeSet)
 makeFileLoadRequest model =
     let
         imports =
             List.filter importsFilter model.parsedStatements
 
-        ( unknownTypes, filesList ) =
-            List.foldl importFoldHelper ( model.unknownTypes, [] ) imports
+        ( unknownTypes, modulesDict ) =
+            List.foldl importFoldHelper ( model.unknownTypes, Dict.empty ) imports
     in
         if not <| Set.isEmpty unknownTypes then
             Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList unknownTypes) ++ "] in import statements!"
         else
-            Ok <| List.reverse filesList
+            Ok <| modulesDict
 
 
 {-| This function is designed to handle additional loading of type definitions came through fileLoadRequest
@@ -42,12 +42,21 @@ makeFileLoadRequest model =
 resolveDependencies : Model -> Model
 resolveDependencies model =
     let
+        firstCall =
+            List.length model.newlyParsedStatements == 0
+
         types =
             List.filter typesFilter <|
-                if List.length model.newlyParsedStatements > 0 then
+                if not firstCall then
                     model.newlyParsedStatements
                 else
                     model.parsedStatements
+
+        moduleName =
+            List.find moduleDeclarationFilter model.parsedStatements |> fromJust "" |> getModuleName
+
+        importsDict =
+            Dict.fromList [ ( moduleName, Set.fromList <| getTypes unknownTypes model.parsedStatements ) ]
 
         typesDict =
             Dict.union model.typesDict <| makeTypesDict types
@@ -73,6 +82,11 @@ resolveDependencies model =
             , unknownTypes = unknownTypes
             , dependencies = ( graphHeads, graph )
             , newlyParsedStatements = []
+            , importsDict =
+                if firstCall then
+                    importsDict
+                else
+                    model.importsDict
             , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
         }
 
@@ -115,7 +129,7 @@ composeFile model =
                 [ printStatement <| makeDecodersModuleDecl model.moduleDeclaration
                 , emptyLine
                 ]
-                    ++ printImports moduleName (getTypes model.parsedStatements)
+                    ++ printImports model.importsDict
                     ++ (printDecoders model.generatedDecoders)
                     ++ [ emptyLine ]
 
@@ -130,15 +144,21 @@ traverseDepGraphAndGenerateDecoders context graphHeads =
         (Set.toList graphHeads)
 
 
-getTypes =
+getTypes unknownTypes =
     List.filterMap
         (\s ->
             case s of
                 TypeAliasDeclaration (TypeConstructor [ consName ] []) _ ->
-                    Just <| (flip TypeExport) Nothing consName
+                    if Set.member consName unknownTypes then
+                        Nothing
+                    else
+                        Just consName
 
                 TypeDeclaration (TypeConstructor [ consName ] []) _ ->
-                    Just <| (flip TypeExport) Nothing consName
+                    if Set.member consName unknownTypes then
+                        Nothing
+                    else
+                        Just consName
 
                 _ ->
                     Nothing
@@ -191,11 +211,11 @@ getModuleName s =
             Debug.crash "Not a module name!"
 
 
-importFoldHelper : Statement -> ( Set.Set String, List (List String) ) -> ( Set.Set String, List (List String) )
-importFoldHelper importStmt ( unknownTypes, filesList ) =
+importFoldHelper : Statement -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) ) -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) )
+importFoldHelper importStmt ( unknownTypes, modulesDict ) =
     let
         defaultReturn =
-            ( unknownTypes, filesList )
+            ( unknownTypes, modulesDict )
     in
         if Set.isEmpty unknownTypes then
             defaultReturn
@@ -209,7 +229,9 @@ importFoldHelper importStmt ( unknownTypes, filesList ) =
                                     Set.fromList <| getImportedTypes exportSet
                             in
                                 if not <| Set.isEmpty <| Set.intersect importedTypes unknownTypes then
-                                    ( Set.diff unknownTypes importedTypes, moduleName :: filesList )
+                                    ( Set.diff unknownTypes importedTypes
+                                    , Dict.insert moduleName (Set.intersect unknownTypes importedTypes) modulesDict
+                                    )
                                 else
                                     defaultReturn
 
@@ -233,13 +255,22 @@ getImportedTypes exportSet =
             []
 
 
-printImports sourceModuleName importedTypes =
-    [ ImportStatement [ "Json", "Decode" ] (Just "JD") (Nothing)
-    , ImportStatement [ "Json", "Decode", "Pipeline" ] (Just "JD") (Nothing)
-    , ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing)
-    , ImportStatement sourceModuleName (Nothing) (Just <| SubsetExport importedTypes)
-    ]
-        |> List.map (printStatement)
+printImports importsDict =
+    let
+        defaultImports =
+            [ ImportStatement [ "Json", "Decode" ] (Just "JD") (Nothing)
+            , ImportStatement [ "Json", "Decode", "Pipeline" ] (Just "JD") (Nothing)
+            , ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing)
+            ]
+
+        toExport ts =
+            ts |> Set.toList |> List.map (\name -> TypeExport name (Nothing)) |> SubsetExport |> Just
+
+        typesImports =
+            List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
+                Dict.toList importsDict
+    in
+        List.map printStatement (defaultImports ++ typesImports)
 
 
 makeDecodersModuleDecl stmt =
