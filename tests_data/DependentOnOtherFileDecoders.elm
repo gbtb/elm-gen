@@ -16,13 +16,6 @@ basicDecoder =
         ]
 
 
-recordDecoder : JD.Decoder Record
-recordDecoder =
-    JD.decode Record
-        |> JD.required "field1" (JD.list JD.float)
-        |> JD.required "field2" basicDecoder
-
-
 dependentTypeDecoder : JD.Decoder DependentType
 dependentTypeDecoder =
     JD.oneOf
@@ -30,3 +23,10 @@ dependentTypeDecoder =
         , JD.field "B" (JD.map B basicDecoder)
         , JD.field "C" (JD.map C recordDecoder)
         ]
+
+
+recordDecoder : JD.Decoder Record
+recordDecoder =
+    JD.decode Record
+        |> JD.required "field1" (JD.list JD.float)
+        |> JD.required "field2" basicDecoder

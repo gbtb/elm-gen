@@ -6,13 +6,6 @@ import Json.Encode as JE
 import Basic exposing (Basic)
 
 
-maybeDecoder decoder =
-    JD.oneOf
-        [ JD.null Nothing
-        , JD.map Just decoder
-        ]
-
-
 basicDecoder : JD.Decoder Basic
 basicDecoder =
     JD.decode Basic
@@ -20,3 +13,10 @@ basicDecoder =
         |> JD.required "b" JD.float
         |> JD.required "c" JD.string
         |> JD.required "d" (maybeDecoder JD.int)
+
+
+maybeDecoder decoder =
+    JD.oneOf
+        [ JD.null Nothing
+        , JD.map Just decoder
+        ]

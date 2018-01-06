@@ -16,7 +16,7 @@ import Model exposing (..)
 
 type alias GenContext =
     { typesDict : Dict.Dict String Statement
-    , graph : Dict.Dict String (Set.Set String)
+    , graph : Dict.Dict String TypeSet
     , userDefinedTypes : Dict.Dict String (List String)
     }
 
@@ -53,7 +53,7 @@ resolveDependencies model =
                     model.parsedStatements
 
         moduleName =
-            List.find moduleDeclarationFilter model.parsedStatements |> fromJust "" |> getModuleName
+            List.find moduleDeclarationFilter model.parsedStatements |> fromJust "Module name not found" |> getModuleName
 
         importsDict =
             Dict.fromList [ ( moduleName, Set.fromList <| getTypes unknownTypes model.parsedStatements ) ]
@@ -109,7 +109,7 @@ generate model =
         { model
             | moduleDeclaration = moduleDeclaration
             , generatedDecoders =
-                traverseDepGraphAndGenerateDecoders
+                generateDecoders
                     (GenContext model.typesDict
                         graph
                         userDefinedTypes
@@ -136,12 +136,6 @@ composeFile model =
 
 printDecoders decoders =
     List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
-
-
-traverseDepGraphAndGenerateDecoders context graphHeads =
-    List.concatMap
-        (\head -> generateDecoders context head)
-        (Set.toList graphHeads)
 
 
 getTypes unknownTypes =
@@ -173,33 +167,22 @@ makeDecodersNameMapping types =
     List.map (\type_ -> ( type_, [ String.toLower type_ ++ "Decoder" ] )) types |> Dict.fromList
 
 
-generateDecoders genContext key =
+generateDecoders genContext graphHeads =
     let
-        listOfDecoders =
-            generateDecodersHelper genContext key
+        typesList =
+            Set.toList <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
     in
-        listOfDecoders
+        List.map (generateDecodersHelper genContext) typesList
 
 
-generateDecodersHelper : GenContext -> String -> List (List Statement)
+generateDecodersHelper : GenContext -> String -> List Statement
 generateDecodersHelper genContext item =
-    let
-        dfsDecoders =
-            Set.foldl
-                (\key list -> List.append list <| generateDecodersHelper genContext key)
-                []
-            <|
-                fromJust ("Types set not found in deps graph: " ++ item) <|
-                    Dict.get item genContext.graph
-    in
-        dfsDecoders
-            ++ [ if item == "Maybe" then
-                    [ genMaybeDecoder ]
-                 else
-                    genDecoder (Transformation.initContext "JD" genContext.userDefinedTypes) <|
-                        fromJust "Type not found in types dict!" <|
-                            Dict.get item genContext.typesDict
-               ]
+    if item == "Maybe" then
+        [ genMaybeDecoder ]
+    else
+        genDecoder (Transformation.initContext "JD" genContext.userDefinedTypes) <|
+            fromJust "Type not found in types dict!" <|
+                Dict.get item genContext.typesDict
 
 
 getModuleName s =

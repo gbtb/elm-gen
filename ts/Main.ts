@@ -48,7 +48,7 @@ if (!args._ ||  args._.length != 4){
             process.exit(1);
         }
 
-        app.ports.input.send([fileContents, []]);
+        app.ports.input.send([fileContents, files.map(l => l.join(".") + ".elm")]);
     });
 
 }

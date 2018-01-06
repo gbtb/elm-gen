@@ -77,7 +77,8 @@ suite =
                             initialModel =
                                 { initModel
                                     | parsedStatements =
-                                        [ TypeDeclaration (TypeConstructor [ "B" ] []) ([ TypeConstructor [ "B" ] ([ TypeConstructor [ "A" ] [] ]) ])
+                                        [ ModuleDeclaration [ "Main" ] AllExport
+                                        , TypeDeclaration (TypeConstructor [ "B" ] []) ([ TypeConstructor [ "B" ] ([ TypeConstructor [ "A" ] [] ]) ])
                                         , TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ]))
                                         ]
                                 }
@@ -97,7 +98,7 @@ suite =
                                 , (\m -> Expect.equal (Dict.keys m.typesDict) [ "A", "B", "C" ])
                                 , (\m -> Expect.equal (Dict.keys <| Tuple.second m.dependencies) [ "A", "B", "C" ])
                                 , (\m -> Expect.equal (Tuple.first m.dependencies) (Set.fromList [ "C" ]))
-                                , (\m -> Expect.equal (List.length m.parsedStatements) 3)
+                                , (\m -> Expect.equal (List.length m.parsedStatements) 4)
                                   --concat new statements as well
                                 ]
                                 finalForm
