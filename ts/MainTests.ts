@@ -73,4 +73,25 @@ describe('Elm-gen by default produces decoder and encoders', () => {
       readFile(dataPath("DependentOnOtherFileDecoders.elm"))
     );
   });
+
+  it('for three-levels deep type structure' , () => {
+    shell.cd('dist');
+    shell.exec("./elm-gen ../tests_data/ThreeLevelsDepth.elm .");
+    expect(
+      readFile(outPath("ThreeLevelsDepthDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("ThreeLevelsDepthDecoders.elm"))
+    );
+  });
+
+  it('can use provided decoders' , () => {
+    shell.cd('dist');
+    shell.exec("./elm-gen ../tests_data/WithDecoder.elm .");
+    expect(
+      readFile(outPath("WithDecoderDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("WithDecoderDecoders.elm"))
+    );
+  });
+
 })
