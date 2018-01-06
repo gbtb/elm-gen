@@ -4,6 +4,7 @@ import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
 import DependentTypes exposing (Basic, Record)
+import DependentOnOtherFile exposing (DependentType)
 
 
 basicDecoder : JD.Decoder Basic
@@ -26,6 +27,6 @@ dependentTypeDecoder : JD.Decoder DependentType
 dependentTypeDecoder =
     JD.oneOf
         [ JD.field "A" (JD.succeed A)
-        , JD.field "B" basicDecoder
-        , JD.field "C" recordDecoder
+        , JD.field "B" (JD.map B basicDecoder)
+        , JD.field "C" (JD.map C recordDecoder)
         ]

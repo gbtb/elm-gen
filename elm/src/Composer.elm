@@ -36,6 +36,9 @@ makeFileLoadRequest model =
             Ok <| List.reverse filesList
 
 
+{-| This function is designed to handle additional loading of type definitions came through fileLoadRequest
+ as well as initial loading of provided input file(s)
+-}
 resolveDependencies : Model -> Model
 resolveDependencies model =
     let
@@ -63,13 +66,14 @@ resolveDependencies model =
                 |> List.foldl Set.union Set.empty
 
         unknownTypes =
-            Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict)
+            Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict) |> Set.remove "Maybe"
     in
         { model
             | typesDict = typesDict
             , unknownTypes = unknownTypes
             , dependencies = ( graphHeads, graph )
             , newlyParsedStatements = []
+            , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
         }
 
 

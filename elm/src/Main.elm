@@ -30,7 +30,7 @@ import Model exposing (..)
 
 
 type Msg
-    = Parse String
+    = Parse ( String, List String )
     | ResolveDependencies
     | Generate
     | Print
@@ -39,22 +39,15 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Parse string ->
+        Parse ( fileContents, fileNames ) ->
             let
                 parsedStatements =
-                    parseModule operators string
+                    parseModule operators fileContents
             in
-                ( { model
-                    | parsedStatements =
-                        case parsedStatements of
-                            Err _ ->
-                                Debug.crash "Failed to parse module!"
-
-                            Ok ( _, _, statements ) ->
-                                statements
-                  }
-                , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
-                )
+                if List.length model.parsedStatements > 0 then
+                    updateAdditionalParse model parsedStatements fileNames
+                else
+                    updateInitialParse model parsedStatements
 
         ResolveDependencies ->
             let
@@ -70,7 +63,7 @@ update msg model =
                     in
                         case fileLoadRequest of
                             Ok req ->
-                                ( new_model, requestFile req )
+                                ( new_model, requestFiles req )
 
                             Err e ->
                                 ( new_model, errorMessage e )
@@ -86,6 +79,34 @@ update msg model =
                     composeFile model
             in
                 ( model, Cmd.batch [ logMessage "Printing...", output fileContent ] )
+
+
+updateInitialParse model parsedStatements =
+    ( { model
+        | parsedStatements =
+            case parsedStatements of
+                Err _ ->
+                    Debug.crash "Failed to parse module!"
+
+                Ok ( _, _, statements ) ->
+                    statements
+      }
+    , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
+    )
+
+
+updateAdditionalParse model parsedStatements fileNames =
+    ( { model
+        | newlyParsedStatements =
+            case parsedStatements of
+                Err _ ->
+                    Debug.crash "Failed to parse module!"
+
+                Ok ( _, _, statements ) ->
+                    statements
+      }
+    , Cmd.batch [ logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
+    )
 
 
 subscriptions : Model -> Sub Msg
@@ -107,7 +128,7 @@ main =
 port output : String -> Cmd msg
 
 
-port requestFile : List (List String) -> Cmd msg
+port requestFiles : List (List String) -> Cmd msg
 
 
 port logMessage : String -> Cmd msg
@@ -116,4 +137,4 @@ port logMessage : String -> Cmd msg
 port errorMessage : String -> Cmd msg
 
 
-port input : (String -> msg) -> Sub msg
+port input : (( String, List String ) -> msg) -> Sub msg
