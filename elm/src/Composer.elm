@@ -12,6 +12,7 @@ import Set
 import Dict
 import Utils exposing (..)
 import Model exposing (..)
+import StatementFilters exposing (..)
 
 
 type alias GenContext =
@@ -25,7 +26,7 @@ makeFileLoadRequest : Model -> Result String (Dict.Dict (List String) TypeSet)
 makeFileLoadRequest model =
     let
         imports =
-            List.filter importsFilter model.parsedStatements
+            List.filter (extractImport >> asFilter) model.parsedStatements
 
         ( unknownTypes, modulesDict ) =
             List.foldl importFoldHelper ( model.unknownTypes, Dict.empty ) imports
@@ -46,14 +47,23 @@ resolveDependencies model =
             List.length model.newlyParsedStatements == 0
 
         types =
-            List.filter typesFilter <|
+            List.filter (extractType >> asFilter) <|
+                if not firstCall then
+                    model.newlyParsedStatements
+                else
+                    model.parsedStatements
+
+        decoders =
+            List.filter (extractDecoder >> asFilter) <|
                 if not firstCall then
                     model.newlyParsedStatements
                 else
                     model.parsedStatements
 
         moduleName =
-            List.find moduleDeclarationFilter model.parsedStatements |> fromJust "Module name not found" |> getModuleName
+            List.find (extractModuleDeclaration >> asFilter) model.parsedStatements
+                |> Maybe.andThen extractModuleDeclaration
+                |> fromJust "Module declaration not found!"
 
         importsDict =
             Dict.fromList [ ( moduleName, Set.fromList <| getTypes unknownTypes model.parsedStatements ) ]
@@ -95,7 +105,7 @@ generate : Model -> Model
 generate model =
     let
         moduleDeclaration =
-            List.find moduleDeclarationFilter model.parsedStatements |> fromJust "Cannot find module declaration!"
+            List.find (extractModuleDeclaration >> asFilter) model.parsedStatements |> fromJust "Cannot find module declaration!"
 
         ( graphHeads, graph ) =
             model.dependencies
@@ -122,7 +132,7 @@ composeFile : Model -> String
 composeFile model =
     let
         moduleName =
-            getModuleName model.moduleDeclaration
+            extractModuleDeclaration model.moduleDeclaration
     in
         String.join "\n" <|
             List.map (produceString 4) <|
@@ -141,21 +151,14 @@ printDecoders decoders =
 getTypes unknownTypes =
     List.filterMap
         (\s ->
-            case s of
-                TypeAliasDeclaration (TypeConstructor [ consName ] []) _ ->
-                    if Set.member consName unknownTypes then
-                        Nothing
-                    else
-                        Just consName
-
-                TypeDeclaration (TypeConstructor [ consName ] []) _ ->
-                    if Set.member consName unknownTypes then
-                        Nothing
-                    else
-                        Just consName
-
-                _ ->
-                    Nothing
+            extractType s
+                |> Maybe.andThen
+                    (\consName ->
+                        if Set.member consName unknownTypes then
+                            Nothing
+                        else
+                            Just consName
+                    )
         )
 
 
@@ -183,15 +186,6 @@ generateDecodersHelper genContext item =
         genDecoder (Transformation.initContext "JD" genContext.userDefinedTypes) <|
             fromJust "Type not found in types dict!" <|
                 Dict.get item genContext.typesDict
-
-
-getModuleName s =
-    case s of
-        ModuleDeclaration m _ ->
-            m
-
-        _ ->
-            Debug.crash "Not a module name!"
 
 
 importFoldHelper : Statement -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) ) -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) )
@@ -268,36 +262,6 @@ makeDecodersModuleDecl stmt =
 
         _ ->
             Debug.crash "Incorrect statement kind was passed!"
-
-
-typesFilter s =
-    case s of
-        TypeAliasDeclaration (TypeConstructor [ consName ] []) (TypeRecord r) ->
-            True
-
-        TypeDeclaration _ _ ->
-            True
-
-        _ ->
-            False
-
-
-moduleDeclarationFilter s =
-    case s of
-        ModuleDeclaration m _ ->
-            True
-
-        _ ->
-            False
-
-
-importsFilter s =
-    case s of
-        ImportStatement _ _ _ ->
-            True
-
-        _ ->
-            False
 
 
 emptyLine =

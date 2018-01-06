@@ -16,16 +16,11 @@ import Json.Decode
 import Platform exposing (program)
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
-import Ast.Statement exposing (..)
-import Transformation exposing (genDecoderForRecord, genDecoder)
-import Printer exposing (printStatement)
-import List.Extra as List
-import Composer exposing (generate, composeFile, resolveDependencies, makeFileLoadRequest, importsFilter)
-import PrintRepr exposing (produceString, (+>), PrintRepr(..))
+import Composer exposing (generate, composeFile, resolveDependencies, makeFileLoadRequest)
+import StatementFilters exposing (extractImport, asFilter)
 import Utils exposing (..)
 import Set
 import Dict
-import Task
 import Model exposing (..)
 
 
@@ -55,7 +50,7 @@ update msg model =
                     resolveDependencies model
 
                 imports =
-                    List.filter importsFilter model.parsedStatements
+                    List.filter (extractImport >> asFilter) model.parsedStatements
             in
                 if Set.isEmpty new_model.unknownTypes then
                     ( new_model, Cmd.batch [ logMessage "Parsing is complete, all required types are loaded...", makeCmd Generate ] )
