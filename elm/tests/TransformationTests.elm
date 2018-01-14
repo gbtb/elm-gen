@@ -58,5 +58,10 @@ suite =
                         Expect.equal
                             (genDecoderForUnionType context <| TypeDeclaration (TypeConstructor [ "T" ] []) ([ TypeConstructor [ "A" ] [], TypeConstructor [ "B" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "C" ] [] ]))
                             (Application (Variable [ "oneOf" ]) (List ([ Application (Application (Variable [ "field" ]) (String "A")) (Application (Variable [ "succeed" ]) (Variable [ "A" ])), Application (Application (Variable [ "field" ]) (String "B")) (Application (Application (Variable [ "map" ]) (Variable [ "B" ])) (Variable [ "int" ])), Application (Application (Variable [ "field" ]) (String "C")) (Application (Variable [ "succeed" ]) (Variable [ "C" ])) ])))
+                , test "Correctly generates expr for multi-arg constructors" <|
+                    \_ ->
+                        Expect.equal
+                            (decodeUnionTypeArgs context "Cons2" [ TypeConstructor [ "String" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Float" ] [] ])
+                            (Application (Application (Application (Application (variable "" "map3") (variable "" "Cons2")) (variable "" "string")) (variable "" "int")) (variable "" "float"))
                 ]
             ]

@@ -69,3 +69,12 @@ extractDecoderName s =
 
         _ ->
             Nothing
+
+
+extractMetaComment s =
+    case s of
+        Comment " #Ignore" ->
+            Just " #Ignore"
+
+        _ ->
+            Nothing

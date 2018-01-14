@@ -18,6 +18,7 @@ import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Composer exposing (generate, composeFile, resolveDependencies, makeFileLoadRequest)
 import StatementFilters exposing (extractImport, asFilter)
+import ParserExtensions exposing (applyMetaComments)
 import Utils exposing (..)
 import Set
 import Dict
@@ -89,7 +90,7 @@ updateInitialParse model parsedStatements =
                     Debug.crash "Failed to parse module!"
 
                 Ok ( _, _, statements ) ->
-                    statements
+                    statements |> applyMetaComments
       }
     , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
     )
@@ -103,7 +104,7 @@ updateAdditionalParse model parsedStatements fileNames =
                     Debug.crash "Failed to parse module!"
 
                 Ok ( _, _, statements ) ->
-                    statements
+                    statements |> applyMetaComments
       }
     , Cmd.batch [ logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
     )

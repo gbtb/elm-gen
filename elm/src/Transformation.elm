@@ -118,18 +118,15 @@ decodeUnionTypeArgs ctx name args =
 
         start =
             Application
-                (Application
-                    (variable ctx.decoderPrefix <| getMapFun n)
-                    (variable "" name)
-                )
+                (variable ctx.decoderPrefix <| getMapFun n)
+                (variable "" name)
     in
-        case List.reverse args of
+        case args of
             [] ->
                 (Application (variable ctx.decoderPrefix "succeed") (variable "" name))
 
-            a :: cons ->
-                start <|
-                    List.foldl (\item accum -> Application (decodeType ctx item) accum) (decodeType ctx a) cons
+            l ->
+                List.foldl (\item accum -> Application accum (decodeType ctx item)) start l
 
 
 genDecoderForRecord : TransformationContext -> String -> Type -> Expression

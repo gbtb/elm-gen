@@ -94,4 +94,14 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('understands meta comments' , () => {
+    shell.cd('dist');
+    shell.exec("./elm-gen ../tests_data/MetaComments.elm .");
+    expect(
+      readFile(outPath("MetaCommentsDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("MetaCommentsDecoders.elm"))
+    );
+  });
+
 })

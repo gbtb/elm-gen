@@ -62,7 +62,7 @@ resolveDependencies model =
                     model.parsedStatements
 
         decodersDict =
-            Debug.log "" <| makeDecodersDict decoders
+            makeDecodersDict decoders
 
         moduleName =
             List.find (extractModuleDeclaration >> asFilter) model.parsedStatements
