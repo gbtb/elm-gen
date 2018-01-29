@@ -8,13 +8,14 @@ const args = parseArgs(process.argv);
 
 //first arg is node exec
 //second arg is elm-gen file itself
-if (!args._ ||  args._.length != 4){
+if (!args._ ||  args._.length < 4){
     console.error("Error: Required arguments not provided!");
     console.log(usageStr);
     process.exit(1);
 }else{
-    const inputPath = args._[2];
-    var outPath = args._[3];
+    const genCommand = args._[2];
+    const inputPath = args._[3];
+    var outPath = args._[4];
     const inputFileName = path.basename(inputPath).split('.')[0];
     const outFileName = `${inputFileName}Decoders.elm`;
 

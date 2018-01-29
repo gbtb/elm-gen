@@ -56,7 +56,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
 
   it('for simple dependent types' , () => {
     shell.cd('dist');
-    shell.exec("./elm-gen ../tests_data/DependentTypes.elm .");
+    shell.exec("./elm-gen d ../tests_data/DependentTypes.elm .");
     expect(
       readFile(outPath("DependentTypesDecoders.elm"))
     ).to.equal(
@@ -66,7 +66,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
 
   it('for types splitted into two files' , () => {
     shell.cd('dist');
-    shell.exec("./elm-gen ../tests_data/DependentOnOtherFile.elm .");
+    shell.exec("./elm-gen d ../tests_data/DependentOnOtherFile.elm .");
     expect(
       readFile(outPath("DependentOnOtherFileDecoders.elm"))
     ).to.equal(
@@ -76,7 +76,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
 
   it('for three-levels deep type structure' , () => {
     shell.cd('dist');
-    shell.exec("./elm-gen ../tests_data/ThreeLevelsDepth.elm .");
+    shell.exec("./elm-gen d ../tests_data/ThreeLevelsDepth.elm .");
     expect(
       readFile(outPath("ThreeLevelsDepthDecoders.elm"))
     ).to.equal(
@@ -86,7 +86,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
 
   it('can use provided decoders' , () => {
     shell.cd('dist');
-    shell.exec("./elm-gen ../tests_data/WithDecoder.elm .");
+    shell.exec("./elm-gen d ../tests_data/WithDecoder.elm .");
     expect(
       readFile(outPath("WithDecoderDecoders.elm"))
     ).to.equal(
@@ -96,7 +96,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
 
   it('understands meta comments' , () => {
     shell.cd('dist');
-    shell.exec("./elm-gen ../tests_data/MetaComments.elm .");
+    shell.exec("./elm-gen d ../tests_data/MetaComments.elm .");
     expect(
       readFile(outPath("MetaCommentsDecoders.elm"))
     ).to.equal(

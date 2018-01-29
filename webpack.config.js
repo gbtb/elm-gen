@@ -8,6 +8,7 @@ module.exports = {
   entry: {  
     "elm-gen":   './ts/Main.ts',
     tests:  './ts/MainTests.ts',
+    "unit-tests": './ts/UnitTests.ts'
     //"elm-part": './elm/src/Main.elm'
   },
   module: {
