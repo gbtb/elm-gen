@@ -3,7 +3,7 @@ module WithDecoderDecoders exposing (..)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import WithDecoder exposing (R, aDecoder)
+import WithDecoder exposing (R(..), aDecoder)
 
 
 rDecoder : JD.Decoder R

@@ -7,8 +7,22 @@ import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
 
 
+type GenCommand
+    = Decoders
+    | Encoders
+    | DecodersAndEncoders
+
+
+
+-- #Ignore
+
+
 type alias TypeSet =
     Set.Set String
+
+
+
+-- #Ignore
 
 
 type alias Model =
@@ -18,7 +32,7 @@ type alias Model =
     , unknownTypes : TypeSet
     , typesDict : Dict.Dict String Statement
     , dependencies : ( TypeSet, Dict.Dict String TypeSet )
-    , importsDict : Dict.Dict (List String) TypeSet
+    , importsDict : Dict.Dict (List String) (Set.Set ( String, Int ))
     , moduleDeclaration : Statement
     , generatedDecoders : List (List Statement)
     }

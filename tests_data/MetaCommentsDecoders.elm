@@ -3,7 +3,7 @@ module MetaCommentsDecoders exposing (..)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import MetaComments exposing (C)
+import MetaComments exposing (C(..))
 
 
 cDecoder : JD.Decoder C

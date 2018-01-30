@@ -2,6 +2,7 @@
 import * as parseArgs from 'minimist'
 import * as fs from 'fs';
 import * as path from 'path';
+import { parseGenCommand } from './Utils';
 
 const usageStr = "usage: elm-gen [input_file] [output_file]";
 const args = parseArgs(process.argv);
@@ -13,7 +14,7 @@ if (!args._ ||  args._.length < 4){
     console.log(usageStr);
     process.exit(1);
 }else{
-    const genCommand = args._[2];
+    const genCommand = parseGenCommand(args._[2]);
     const inputPath = args._[3];
     var outPath = args._[4];
     const inputFileName = path.basename(inputPath).split('.')[0];
@@ -49,7 +50,7 @@ if (!args._ ||  args._.length < 4){
             process.exit(1);
         }
 
-        app.ports.input.send([fileContents, files.map(l => l.join(".") + ".elm")]);
+        app.ports.input.send([fileContents, files.map(l => l.join(".") + ".elm"), genCommand]);
     });
 
 }

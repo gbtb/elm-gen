@@ -153,20 +153,20 @@ printDecoders decoders =
     List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
-getTypes : Dict.Dict String Statement -> Set.Set String -> List Statement -> List String
+getTypes : Dict.Dict String Statement -> Set.Set String -> List Statement -> List ( String, Int )
 getTypes decoders unknownTypes =
     List.filterMap
         (\s ->
             extractType s
                 |> Maybe.andThen
-                    (\consName ->
+                    (\( consName, isUnionType ) ->
                         Dict.get consName decoders
-                            |> Maybe.andThen extractDecoderName
+                            |> (\s -> Maybe.andThen extractDecoderName s |> Maybe.map (\x -> ( x, 0 )))
                             |> Maybe.orElse
                                 (if Set.member consName unknownTypes then
                                     Nothing
                                  else
-                                    Just consName
+                                    Just ( consName, isUnionType )
                                 )
                     )
         )
@@ -274,8 +274,14 @@ printImports importsDict =
             , ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing)
             ]
 
+        getExportSet isUnionType =
+            if isUnionType == 1 then
+                Just AllExport
+            else
+                Nothing
+
         toExport ts =
-            ts |> Set.toList |> List.map (\name -> TypeExport name (Nothing)) |> SubsetExport |> Just
+            ts |> Set.toList |> List.map (\( name, isUnionType ) -> TypeExport name (getExportSet isUnionType)) |> SubsetExport |> Just
 
         typesImports =
             List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
@@ -285,17 +291,23 @@ printImports importsDict =
 
 
 makeDecodersModuleDecl stmt =
-    case stmt of
-        ModuleDeclaration moduleName _ ->
-            let
-                newModuleName =
-                    List.updateAt (List.length moduleName - 1) (\x -> x ++ "Decoders") moduleName
-                        |> fromJust "Impossibru!"
-            in
-                ModuleDeclaration newModuleName AllExport
+    let
+        moduleName =
+            case stmt of
+                ModuleDeclaration m _ ->
+                    m
 
-        _ ->
-            Debug.crash "Incorrect statement kind was passed!"
+                PortModuleDeclaration m _ ->
+                    m
+
+                _ ->
+                    Debug.crash "Incorrect statement kind was passed!"
+
+        newModuleName =
+            List.updateAt (List.length moduleName - 1) (\x -> x ++ "Decoders") moduleName
+                |> fromJust "Impossibru!"
+    in
+        ModuleDeclaration newModuleName AllExport
 
 
 emptyLine =

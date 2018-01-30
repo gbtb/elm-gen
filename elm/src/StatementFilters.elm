@@ -16,10 +16,10 @@ asFilter mb =
 extractType s =
     case s of
         TypeAliasDeclaration (TypeConstructor [ consName ] []) (TypeRecord r) ->
-            Just consName
+            Just ( consName, 0 )
 
         TypeDeclaration (TypeConstructor [ consName ] []) _ ->
-            Just consName
+            Just ( consName, 1 )
 
         _ ->
             Nothing
@@ -28,6 +28,9 @@ extractType s =
 extractModuleDeclaration s =
     case s of
         ModuleDeclaration m _ ->
+            Just m
+
+        PortModuleDeclaration m _ ->
             Just m
 
         _ ->

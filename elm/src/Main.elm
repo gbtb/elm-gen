@@ -9,6 +9,7 @@ port module Main exposing (main)
 --required to interop with js
 
 import Json.Decode
+import Json.Encode as JE
 
 
 --
