@@ -16,10 +16,10 @@ asFilter mb =
 extractType s =
     case s of
         TypeAliasDeclaration (TypeConstructor [ consName ] []) (TypeRecord r) ->
-            Just ( consName, 0 )
+            Just ( consName, False )
 
         TypeDeclaration (TypeConstructor [ consName ] []) _ ->
-            Just ( consName, 1 )
+            Just ( consName, True )
 
         _ ->
             Nothing

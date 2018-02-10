@@ -144,7 +144,7 @@ composeFile model =
                 [ printStatement <| makeDecodersModuleDecl model.moduleDeclaration
                 , emptyLine
                 ]
-                    ++ printImports model.importsDict
+                    ++ printImports model.importsDict model.typesDict
                     ++ (printDecoders model.generatedDecoders)
                     ++ [ emptyLine ]
 
@@ -153,20 +153,20 @@ printDecoders decoders =
     List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
-getTypes : Dict.Dict String Statement -> Set.Set String -> List Statement -> List ( String, Int )
+getTypes : Dict.Dict String Statement -> Set.Set String -> List Statement -> List String
 getTypes decoders unknownTypes =
     List.filterMap
         (\s ->
             extractType s
                 |> Maybe.andThen
-                    (\( consName, isUnionType ) ->
+                    (\( consName, _ ) ->
                         Dict.get consName decoders
-                            |> (\s -> Maybe.andThen extractDecoderName s |> Maybe.map (\x -> ( x, 0 )))
+                            |> Maybe.andThen extractDecoderName
                             |> Maybe.orElse
                                 (if Set.member consName unknownTypes then
                                     Nothing
                                  else
-                                    Just ( consName, isUnionType )
+                                    Just consName
                                 )
                     )
         )
@@ -266,7 +266,7 @@ getImportedTypes exportSet =
             []
 
 
-printImports importsDict =
+printImports importsDict typesDict =
     let
         defaultImports =
             [ ImportStatement [ "Json", "Decode" ] (Just "JD") (Nothing)
@@ -274,20 +274,26 @@ printImports importsDict =
             , ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing)
             ]
 
-        getExportSet isUnionType =
-            if isUnionType == 1 then
-                Just AllExport
-            else
-                Nothing
-
         toExport ts =
-            ts |> Set.toList |> List.map (\( name, isUnionType ) -> TypeExport name (getExportSet isUnionType)) |> SubsetExport |> Just
+            ts |> Set.toList |> List.map (\name -> TypeExport name (getExportSet typesDict name)) |> SubsetExport |> Just
 
         typesImports =
             List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
-                Dict.toList importsDict
+                Dict.toList
+                    importsDict
     in
         List.map printStatement (defaultImports ++ typesImports)
+
+
+getExportSet typesDict name =
+    let
+        isUnionType =
+            Dict.get name typesDict |> Maybe.andThen extractType |> Maybe.map Tuple.second |> Maybe.withDefault False
+    in
+        if isUnionType then
+            Just AllExport
+        else
+            Nothing
 
 
 makeDecodersModuleDecl stmt =

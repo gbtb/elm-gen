@@ -32,7 +32,7 @@ type alias Model =
     , unknownTypes : TypeSet
     , typesDict : Dict.Dict String Statement
     , dependencies : ( TypeSet, Dict.Dict String TypeSet )
-    , importsDict : Dict.Dict (List String) (Set.Set ( String, Int ))
+    , importsDict : Dict.Dict (List String) TypeSet
     , moduleDeclaration : Statement
     , generatedDecoders : List (List Statement)
     }
