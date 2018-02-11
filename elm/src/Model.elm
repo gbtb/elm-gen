@@ -13,6 +13,13 @@ type GenCommand
     | DecodersAndEncoders
 
 
+type alias InputInfo =
+    { fileContents : String
+    , fileNames : List String
+    , genCommand : GenCommand
+    }
+
+
 
 -- #Ignore
 
@@ -27,6 +34,7 @@ type alias TypeSet =
 
 type alias Model =
     { inputFileContent : String
+    , genCommand : GenCommand
     , parsedStatements : List Statement
     , newlyParsedStatements : List Statement
     , unknownTypes : TypeSet
@@ -40,6 +48,7 @@ type alias Model =
 
 initModel =
     { inputFileContent = ""
+    , genCommand = Decoders
     , parsedStatements = []
     , newlyParsedStatements = []
     , unknownTypes = Set.empty

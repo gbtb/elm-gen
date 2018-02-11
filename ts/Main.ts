@@ -38,8 +38,12 @@ if (!args._ ||  args._.length < 4){
         process.exit(1);
     });
 
-    const fileContent: string = fs.readFileSync(inputPath, {encoding: 'utf-8'});
-    app.ports.input.send([fileContent, [inputPath] ]);
+    const fileContents: string = fs.readFileSync(inputPath, {encoding: 'utf-8'});
+    app.ports.input.send({
+        fileContents: fileContents, 
+        fileNames: [inputPath],
+        genCommand: genCommand 
+    });
 
     //port for requesting of additional files to get type dependencies
     app.ports.requestFiles.subscribe((files: [[string]]) => {
@@ -49,7 +53,11 @@ if (!args._ ||  args._.length < 4){
             process.exit(1);
         }
 
-        app.ports.input.send([fileContents, files.map(l => l.join(".") + ".elm"), genCommand]);
+        app.ports.input.send({
+            fileContents: fileContents, 
+            fileNames: files.map(l => l.join(".") + ".elm"),
+            genCommand: genCommand 
+        });
     });
 
 }

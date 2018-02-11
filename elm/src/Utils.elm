@@ -16,6 +16,15 @@ fromJust err m =
             Debug.crash err
 
 
+fromOk r =
+    case r of
+        Ok x ->
+            x
+
+        Err e ->
+            Debug.crash (toString e)
+
+
 getTypeName t =
     case t of
         TypeConstructor [ name ] [] ->

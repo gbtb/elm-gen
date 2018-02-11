@@ -8,7 +8,7 @@ port module Main exposing (main)
 
 --required to interop with js
 
-import Json.Decode
+import Json.Decode as JD
 import Json.Encode as JE
 
 
@@ -28,7 +28,7 @@ import ModelDecoders exposing (..)
 
 
 type Msg
-    = Parse ( String, List String )
+    = Parse InputInfo
     | ResolveDependencies
     | Generate
     | Print
@@ -37,13 +37,15 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Parse ( fileContents, fileNames ) ->
+        Parse inputInfo ->
             let
                 parsedStatements =
-                    parseModule operators fileContents
+                    parseModule operators inputInfo.fileContents
             in
                 if List.length model.parsedStatements > 0 then
-                    updateAdditionalParse model parsedStatements fileNames
+                    updateAdditionalParse model
+                        parsedStatements
+                        inputInfo.fileNames
                 else
                     updateInitialParse model parsedStatements
 
@@ -114,7 +116,7 @@ updateAdditionalParse model parsedStatements fileNames =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    input Parse
+    input <| (\value -> JD.decodeValue inputInfoDecoder value |> fromOk |> Parse)
 
 
 {-| Main func as it is
@@ -140,4 +142,4 @@ port logMessage : String -> Cmd msg
 port errorMessage : String -> Cmd msg
 
 
-port input : (( String, List String ) -> msg) -> Sub msg
+port input : (JE.Value -> msg) -> Sub msg
