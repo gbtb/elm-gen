@@ -106,7 +106,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
 
   it('generates both decoders and encoders' , () => {
     shell.cd('dist');
-    shell.exec("./elm-gen d&e ../tests_data/Basic.elm .");
+    shell.exec("./elm-gen d,e ../tests_data/Basic.elm .");
     expect(
       readFile(outPath("BasicDecodersAndEncoders.elm"))
     ).to.equal(

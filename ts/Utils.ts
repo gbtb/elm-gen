@@ -1,7 +1,7 @@
 export enum GenCommand {
     Decoders = "Decoders",
     Encoders = "Encoders",
-    DecodersAndEncoders = "Decoders&Encoders"
+    DecodersAndEncoders = "DecodersAndEncoders"
 }
 
 export function parseGenCommand(str: string) : GenCommand
@@ -16,4 +16,9 @@ export function parseGenCommand(str: string) : GenCommand
         return GenCommand.Encoders;
 
     throw new Error("Cannot parse generation command!");
+}
+
+export function getOutputFileName(inputFileName: string, com: GenCommand): string
+{
+    return `${inputFileName}${com}.elm`;
 }

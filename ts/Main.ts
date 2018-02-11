@@ -2,7 +2,7 @@
 import * as parseArgs from 'minimist'
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseGenCommand } from './Utils';
+import { parseGenCommand, getOutputFileName } from './Utils';
 
 const usageStr = "usage: elm-gen [input_file] [output_file]";
 const args = parseArgs(process.argv);
@@ -17,8 +17,7 @@ if (!args._ ||  args._.length < 4){
     const genCommand = parseGenCommand(args._[2]);
     const inputPath = args._[3];
     var outPath = args._[4];
-    const inputFileName = path.basename(inputPath).split('.')[0];
-    const outFileName = `${inputFileName}Decoders.elm`;
+    const outFileName = getOutputFileName(path.basename(inputPath).split('.')[0], genCommand);
 
     outPath = path.join(outPath, outFileName);
 
