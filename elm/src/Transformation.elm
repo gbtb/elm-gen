@@ -7,6 +7,7 @@ import Set
 import Dict
 import Char
 import Utils exposing (..)
+import List.Extra as List
 
 
 type alias TransformationContext =
@@ -127,6 +128,20 @@ qualifiedName prefix name =
         [ name ]
 
 
+genEncoderForUnionType : TransformationContext -> Statement -> Expression
+genEncoderForUnionType ctx unionType =
+    let
+        begin =
+            Case (variable ctx.decoderPrefix "value")
+    in
+        case unionType of
+            TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
+                begin <| List.map (genEncoderForUnionTypeConstructor ctx) constructors
+
+            _ ->
+                Debug.crash "It is not a union type!"
+
+
 genDecoderForUnionType : TransformationContext -> Statement -> Expression
 genDecoderForUnionType ctx unionType =
     let
@@ -139,6 +154,29 @@ genDecoderForUnionType ctx unionType =
 
             _ ->
                 Debug.crash "It is not a union type!"
+
+
+genEncoderForUnionTypeConstructor ctx cons =
+    case cons of
+        TypeConstructor [ name ] args ->
+            let
+                n =
+                    List.length args
+
+                start =
+                    variable "" name
+            in
+                ( if n == 0 then
+                    start
+                  else
+                    List.foldl (\item accum -> Application accum item) start (getDummyVariables n)
+                , (Application (variable ctx.decoderPrefix "object")
+                    (List <| [ Tuple <| (String name) :: encodeUnionTypeArgs ctx name args ])
+                  )
+                )
+
+        _ ->
+            Debug.crash "Invalid union type constructor!"
 
 
 genDecoderForUnionTypeConstructor ctx cons =
@@ -170,6 +208,19 @@ decodeUnionTypeArgs ctx name args =
 
             l ->
                 List.foldl (\item accum -> Application accum (decodeType ctx item)) start l
+
+
+encodeUnionTypeArgs ctx name args =
+    let
+        n =
+            List.length args
+    in
+        case args of
+            [] ->
+                [ variable ctx.decoderPrefix "null" ]
+
+            l ->
+                List.map (\( type_, var ) -> Application (encodeType ctx type_) var) (List.zip l <| getDummyVariables n)
 
 
 genDecoderForRecord : TransformationContext -> String -> Type -> Expression
@@ -322,3 +373,7 @@ getMapFun n =
 
         x ->
             "map" ++ (toString x)
+
+
+getDummyVariables n =
+    (List.range 1 n) |> List.map toString |> List.map ((++) "v") |> List.map (variable "")

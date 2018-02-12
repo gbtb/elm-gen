@@ -46,12 +46,16 @@ suite =
                         Expect.equal
                             (genEncoderForRecord context "Basic" <| ((TypeRecord ([ ( "a", TypeConstructor [ "Int" ] [] ), ( "b", TypeConstructor [ "String" ] [] ) ]))))
                             (Application (Variable [ "object" ]) (List ([ Tuple ([ String "a", Application (Variable [ "int" ]) (Access (Variable [ "value" ]) [ "a" ]) ]), Tuple ([ String "b", Application (Variable [ "string" ]) (Access (Variable [ "value" ]) [ "b" ]) ]) ])))
-                            test
-                            "Generates decoder for simple union type"
-                        <|
-                            \_ ->
-                                Expect.equal
-                                    (genEncoderForUnionType context <| TypeDeclaration (TypeConstructor [ "T" ] []) ([ TypeConstructor [ "A" ] [], TypeConstructor [ "B" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "C" ] [] ]))
+                , test "Generates encoder for simple union type" <|
+                    \_ ->
+                        Expect.equal
+                            (genEncoderForUnionType context <| TypeDeclaration (TypeConstructor [ "T" ] []) ([ TypeConstructor [ "A" ] [], TypeConstructor [ "B" ] [], TypeConstructor [ "C" ] [] ]))
+                            (Case (Variable [ "value" ]) ([ ( Variable [ "A" ], Application (Variable [ "object" ]) (List ([ Tuple ([ String "A", Variable [ "null" ] ]) ])) ), ( Variable [ "B" ], Application (Variable [ "object" ]) (List ([ Tuple ([ String "B", Variable [ "null" ] ]) ])) ), ( Variable [ "C" ], Application (Variable [ "object" ]) (List ([ Tuple ([ String "C", Variable [ "null" ] ]) ])) ) ]))
+                , test "Generates encoder for non-trivial union type" <|
+                    \_ ->
+                        Expect.equal
+                            (genEncoderForUnionType context <| TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "A" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "B" ] ([ TypeConstructor [ "Float" ] [] ]) ]))
+                            (Case (Variable [ "value" ]) ([ ( Application (Variable [ "A" ]) (Variable [ "v1" ]), Application (Variable [ "object" ]) (List ([ Tuple ([ String "A", Application (Variable [ "int" ]) (Variable [ "v1" ]) ]) ])) ), ( Application (Variable [ "B" ]) (Variable [ "v1" ]), Application (Variable [ "object" ]) (List ([ Tuple ([ String "B", Application (Variable [ "float" ]) (Variable [ "v1" ]) ]) ])) ) ]))
                 ]
             , describe
                 "Complex fields"
