@@ -46,8 +46,9 @@ update msg model =
                     updateAdditionalParse model
                         parsedStatements
                         inputInfo.fileNames
+                        inputInfo.genCommand
                 else
-                    updateInitialParse model parsedStatements
+                    updateInitialParse model parsedStatements inputInfo.genCommand
 
         ResolveDependencies ->
             let
@@ -86,7 +87,7 @@ update msg model =
                 ( model, Cmd.batch [ logMessage "Printing...", output fileContent ] )
 
 
-updateInitialParse model parsedStatements =
+updateInitialParse model parsedStatements genCommand =
     ( { model
         | parsedStatements =
             case parsedStatements of
@@ -95,12 +96,13 @@ updateInitialParse model parsedStatements =
 
                 Ok ( _, _, statements ) ->
                     statements |> applyMetaComments
+        , genCommand = genCommand
       }
     , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
     )
 
 
-updateAdditionalParse model parsedStatements fileNames =
+updateAdditionalParse model parsedStatements fileNames genCommand =
     ( { model
         | newlyParsedStatements =
             case parsedStatements of
@@ -109,6 +111,7 @@ updateAdditionalParse model parsedStatements fileNames =
 
                 Ok ( _, _, statements ) ->
                     statements |> applyMetaComments
+        , genCommand = genCommand
       }
     , Cmd.batch [ logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
     )

@@ -43,6 +43,7 @@ type alias Model =
     , importsDict : Dict.Dict (List String) TypeSet
     , moduleDeclaration : Statement
     , generatedDecoders : List (List Statement)
+    , generatedEncoders : List (List Statement)
     }
 
 
@@ -57,4 +58,5 @@ initModel =
     , importsDict = Dict.empty
     , moduleDeclaration = Comment "Init placeholder"
     , generatedDecoders = []
+    , generatedEncoders = []
     }

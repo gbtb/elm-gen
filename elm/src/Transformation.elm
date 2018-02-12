@@ -77,6 +77,49 @@ genDecoder context stmt =
             Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
 
 
+genEncoder : TransformationContext -> Statement -> List Statement
+genEncoder context stmt =
+    case stmt of
+        TypeAliasDeclaration leftPart rightPart ->
+            let
+                typeName =
+                    getTypeName leftPart
+
+                decoderName =
+                    getDecoderName typeName
+
+                encoderType =
+                    if String.length context.decoderPrefix > 0 then
+                        [ context.decoderPrefix, "Value" ]
+                    else
+                        [ "Value" ]
+            in
+                [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor [ typeName ] [])) (TypeConstructor encoderType [])
+                , FunctionDeclaration (decoderName) [ variable "" "Value" ] <| genDecoderForRecord context typeName rightPart
+                ]
+
+        TypeDeclaration leftPart rightPart ->
+            let
+                typeName =
+                    getTypeName leftPart
+
+                decoderName =
+                    getDecoderName typeName
+
+                decoderType =
+                    if String.length context.decoderPrefix > 0 then
+                        [ context.decoderPrefix, "Decoder" ]
+                    else
+                        [ "Decoder" ]
+            in
+                [ FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
+                , FunctionDeclaration (decoderName) [] <| genDecoderForUnionType context stmt
+                ]
+
+        _ ->
+            Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
+
+
 qualifiedName prefix name =
     if String.length prefix > 0 then
         [ prefix, name ]
@@ -149,12 +192,58 @@ genDecoderForRecord ctx typeName recordAst =
                 Debug.crash "It is not a record!"
 
 
+genEncoderForRecord : TransformationContext -> String -> Type -> Expression
+genEncoderForRecord ctx typeName recordAst =
+    let
+        encodeApp =
+            (Application (Variable <| qualifiedName ctx.decoderPrefix "decode") (Variable [ typeName ]))
+    in
+        case recordAst of
+            TypeRecord l ->
+                Application (Variable <| qualifiedName ctx.decoderPrefix "object") (List <| List.map (encodeRecordField ctx) l)
+
+            _ ->
+                Debug.crash "It is not a record!"
+
+
+encodeRecordField ctx ( name, type_ ) =
+    let
+        typeEncoder ctx =
+            encodeType ctx type_
+    in
+        Tuple [ (String name), (Application <| typeEncoder ctx) (Access (variable "" "value") [ name ]) ]
+
+
 recordFieldDec ctx ( name, type_ ) =
     let
         typeDecoder ctx =
             decodeType ctx type_
     in
         Application (Application (Variable <| qualifiedName ctx.decoderPrefix "required") (String name)) (typeDecoder ctx)
+
+
+encodeType ctx type_ =
+    case type_ of
+        TypeConstructor [ typeName ] argsTypes ->
+            encodeKnownTypeConstructor ctx typeName argsTypes
+
+        _ ->
+            Debug.crash "Cannot encode this type yet?"
+
+
+encodeKnownTypeConstructor ctx typeName argsTypes =
+    let
+        firstType =
+            Dict.get typeName ctx.knownTypes
+                |> fromJust ("Unknown type somehow leaked to transformation stage." ++ typeName)
+                |> Variable
+    in
+        case argsTypes of
+            [] ->
+                firstType
+
+            l ->
+                List.foldl (\item accum -> Application accum (decodeType ctx item)) firstType l
 
 
 decodeType ctx type_ =

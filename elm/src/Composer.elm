@@ -3,7 +3,7 @@ module Composer exposing (..)
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
-import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder)
+import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder, TransformationContext, genEncoder)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
@@ -20,6 +20,9 @@ type alias GenContext =
     { typesDict : Dict.Dict String Statement
     , graph : Dict.Dict String TypeSet
     , userDefinedTypes : Dict.Dict String (List String)
+    , generatorFunc : TransformationContext -> Statement -> List Statement
+    , prefix : String
+    , maybeStub : Statement
     }
 
 
@@ -124,12 +127,31 @@ generate model =
         { model
             | moduleDeclaration = moduleDeclaration
             , generatedDecoders =
-                generateDecoders
-                    (GenContext model.typesDict
-                        graph
-                        userDefinedTypes
-                    )
-                    graphHeads
+                if (model.genCommand == Decoders) || (model.genCommand == DecodersAndEncoders) then
+                    generateDecoders
+                        (GenContext model.typesDict
+                            graph
+                            userDefinedTypes
+                            genDecoder
+                            "JD"
+                            genMaybeDecoder
+                        )
+                        graphHeads
+                else
+                    []
+            , generatedEncoders =
+                if (model.genCommand == Encoders) || (model.genCommand == DecodersAndEncoders) then
+                    generateDecoders
+                        (GenContext model.typesDict
+                            graph
+                            userDefinedTypes
+                            genEncoder
+                            "JE"
+                            genMaybeDecoder
+                        )
+                        graphHeads
+                else
+                    []
         }
 
 
@@ -146,11 +168,15 @@ composeFile model =
                 ]
                     ++ printImports model.importsDict model.typesDict
                     ++ (printDecoders model.generatedDecoders)
+                    ++ (printDecoders model.generatedEncoders)
                     ++ [ emptyLine ]
 
 
 printDecoders decoders =
-    List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
+    if decoders == [] then
+        []
+    else
+        List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
 getTypes : Dict.Dict String Statement -> Set.Set String -> List Statement -> List String
@@ -205,7 +231,7 @@ generateDecoders genContext graphHeads =
 generateDecodersHelper : GenContext -> String -> Maybe (List Statement)
 generateDecodersHelper genContext item =
     if item == "Maybe" then
-        Just [ genMaybeDecoder ]
+        Just [ genContext.maybeStub ]
     else
         let
             typeDeclaration =
@@ -216,7 +242,7 @@ generateDecodersHelper genContext item =
                     if (extractDecoder >> asFilter) stmt then
                         Nothing
                     else
-                        Just <| genDecoder (Transformation.initContext "JD" genContext.userDefinedTypes) stmt
+                        Just <| genContext.generatorFunc (Transformation.initContext genContext.prefix genContext.userDefinedTypes) stmt
 
                 Nothing ->
                     Debug.log "Type not found in types dict!" <| Nothing

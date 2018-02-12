@@ -120,6 +120,9 @@ printType type_ =
                 ++ (List.map printType typesList |> String.join " ")
                 ++ ")"
 
+        TypeApplication tc1 tc2 ->
+            printType tc1 ++ " -> " ++ printType tc2
+
         _ ->
             Debug.crash "Cannot print this type(yet?)"
 

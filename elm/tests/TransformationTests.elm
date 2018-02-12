@@ -35,6 +35,25 @@ suite =
                             (BinOp (Variable [ "|>" ]) (Application (Variable [ "decode" ]) (Variable [ "Basic" ])) (BinOp (Variable [ "|>" ]) (Application (Application (Variable [ "required" ]) (String "a")) (Variable [ "int" ])) (BinOp (Variable [ "|>" ]) (Application (Application (Variable [ "required" ]) (String "b")) (Variable [ "string" ])) (Application (Application (Variable [ "required" ]) (String "c")) (Variable [ "float" ])))))
                 ]
             , describe
+                "Encoders"
+                [ test "Generates encoder for record type with one field" <|
+                    \_ ->
+                        Expect.equal
+                            (genEncoderForRecord context "Basic" <| (TypeRecord ([ ( "a", TypeConstructor [ "Int" ] [] ) ])))
+                            (Application (Variable [ "object" ]) (List ([ Tuple ([ String "a", Application (Variable [ "int" ]) (Access (Variable [ "value" ]) [ "a" ]) ]) ])))
+                , test "Generates encoder for record type with two fields" <|
+                    \_ ->
+                        Expect.equal
+                            (genEncoderForRecord context "Basic" <| ((TypeRecord ([ ( "a", TypeConstructor [ "Int" ] [] ), ( "b", TypeConstructor [ "String" ] [] ) ]))))
+                            (Application (Variable [ "object" ]) (List ([ Tuple ([ String "a", Application (Variable [ "int" ]) (Access (Variable [ "value" ]) [ "a" ]) ]), Tuple ([ String "b", Application (Variable [ "string" ]) (Access (Variable [ "value" ]) [ "b" ]) ]) ])))
+                            test
+                            "Generates decoder for simple union type"
+                        <|
+                            \_ ->
+                                Expect.equal
+                                    (genEncoderForUnionType context <| TypeDeclaration (TypeConstructor [ "T" ] []) ([ TypeConstructor [ "A" ] [], TypeConstructor [ "B" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "C" ] [] ]))
+                ]
+            , describe
                 "Complex fields"
                 [ test "Generates decoder for record type with complex field type" <|
                     \_ ->
