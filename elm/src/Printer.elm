@@ -73,6 +73,14 @@ printExpression context e =
             List exprList ->
                 printList context exprList
 
+            Tuple exprList ->
+                printTuple context exprList
+
+            Case expr caseBranches ->
+                makeLines
+                    (Line 0 "case" +> (printExpression context expr) +> Line 0 "of")
+                    (List.map (printCaseBranch context) caseBranches |> List.intersperse (Line -1 "") |> Lines)
+
             _ ->
                 Debug.crash "Cant print this type of expression!"
 
@@ -133,8 +141,6 @@ printList ctx exprList =
         [] ->
             Line 0 "[]"
 
-        --[ a ] ->
-        --    prepend (Line 0 "[") (printExpression ctx a)
         h :: cons ->
             makeLines
                 (List.foldl (\accum item -> makeLines item accum)
@@ -142,6 +148,31 @@ printList ctx exprList =
                     (List.map (\expr -> printExpression ctx expr |> prepend (Line 0 ",")) cons)
                 )
                 (Line 0 "]")
+
+
+printTuple : PrintContext -> List Expression -> PrintRepr
+printTuple ctx exprList =
+    case exprList of
+        [] ->
+            Line 0 "()"
+
+        h :: cons ->
+            (List.foldl (\accum item -> item :> accum)
+                (Line 0 "(" +> printExpression ctx h)
+                (List.map (\expr -> printExpression ctx expr |> prepend (Line 0 ",")) cons)
+            )
+                +> (Line 0 ")")
+
+
+printCaseBranch ctx ( leftPart, rightPart ) =
+    let
+        l1 =
+            ident 1 <| printExpression ctx leftPart +> Line 0 "->"
+
+        l2 =
+            ident 2 <| printExpression ctx rightPart
+    in
+        makeLines l1 l2
 
 
 printImportStatement moduleName alias exportSet =

@@ -50,6 +50,11 @@ suite =
                     Expect.equal
                         (printExpression (Access (Variable [ "JD" ]) [ "null" ]))
                         (Line 0 "JD.null")
+            , test "Tuple" <|
+                \_ ->
+                    Expect.equal
+                        (printExpression <| Tuple ([ String "a", Application (Variable [ "JE", "int" ]) (Access (Variable [ "value" ]) [ "a" ]) ]))
+                        (Line 0 "( \"a\", JE.int value.a )")
             ]
         , describe "statements"
             [ test "Simple function statement" <|

@@ -44,7 +44,7 @@ genDecoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName
+                    getDecoderName typeName "Decoder"
 
                 decoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -62,7 +62,7 @@ genDecoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName
+                    getDecoderName typeName "Decoder"
 
                 decoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -87,7 +87,7 @@ genEncoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName
+                    getDecoderName typeName "Encoder"
 
                 encoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -96,7 +96,7 @@ genEncoder context stmt =
                         [ "Value" ]
             in
                 [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor [ typeName ] [])) (TypeConstructor encoderType [])
-                , FunctionDeclaration (decoderName) [ variable "" "Value" ] <| genDecoderForRecord context typeName rightPart
+                , FunctionDeclaration (decoderName) [ variable "" "value" ] <| genEncoderForRecord context typeName rightPart
                 ]
 
         TypeDeclaration leftPart rightPart ->
@@ -105,16 +105,16 @@ genEncoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName
+                    getDecoderName typeName "Encoder"
 
                 decoderType =
                     if String.length context.decoderPrefix > 0 then
-                        [ context.decoderPrefix, "Decoder" ]
+                        [ context.decoderPrefix, "Encoder" ]
                     else
-                        [ "Decoder" ]
+                        [ "Encoder" ]
             in
                 [ FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
-                , FunctionDeclaration (decoderName) [] <| genDecoderForUnionType context stmt
+                , FunctionDeclaration (decoderName) [] <| genEncoderForUnionType context stmt
                 ]
 
         _ ->
@@ -334,6 +334,19 @@ genMaybeDecoder =
                  , Application (Application (Access (Variable [ "JD" ]) [ "map" ]) (Variable [ "Just" ])) (Variable [ "decoder" ])
                  ]
                 )
+            )
+        )
+
+
+genMaybeEncoder =
+    FunctionDeclaration "maybeEncoder"
+        ([ Variable [ "valueEncoder" ], Variable [ "value" ] ])
+        (Case (Variable [ "value" ])
+            ([ ( Application (Variable [ "Just" ]) (Variable [ "value" ])
+               , Application (Variable [ "valueEncoder" ]) (Variable [ "value" ])
+               )
+             , ( Variable [ "Nothing" ], Access (Variable [ "JE" ]) [ "null" ] )
+             ]
             )
         )
 

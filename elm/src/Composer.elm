@@ -3,7 +3,7 @@ module Composer exposing (..)
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
-import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder, TransformationContext, genEncoder)
+import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder, genMaybeEncoder, TransformationContext, genEncoder)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
@@ -118,11 +118,17 @@ generate model =
         ( graphHeads, graph ) =
             model.dependencies
 
-        userDefinedTypes =
+        userDefinedTypesDecoders =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
                 |> Set.toList
-                |> makeDecodersNameMapping
+                |> makeNameMapping "Decoder"
+
+        userDefinedTypesEncoders =
+            Dict.values graph
+                |> List.foldl Set.union Set.empty
+                |> Set.toList
+                |> makeNameMapping "Encoder"
     in
         { model
             | moduleDeclaration = moduleDeclaration
@@ -131,7 +137,7 @@ generate model =
                     generateDecoders
                         (GenContext model.typesDict
                             graph
-                            userDefinedTypes
+                            userDefinedTypesDecoders
                             genDecoder
                             "JD"
                             genMaybeDecoder
@@ -144,10 +150,10 @@ generate model =
                     generateDecoders
                         (GenContext model.typesDict
                             graph
-                            userDefinedTypes
+                            userDefinedTypesEncoders
                             genEncoder
                             "JE"
-                            genMaybeDecoder
+                            genMaybeEncoder
                         )
                         graphHeads
                 else
@@ -163,7 +169,7 @@ composeFile model =
     in
         String.join "\n" <|
             List.map (produceString 4) <|
-                [ printStatement <| makeDecodersModuleDecl model.moduleDeclaration
+                [ printStatement <| makeDecodersModuleDecl model.genCommand model.moduleDeclaration
                 , emptyLine
                 ]
                     ++ printImports model.importsDict model.typesDict
@@ -216,8 +222,8 @@ makeDecodersDict decoders =
         decoders
 
 
-makeDecodersNameMapping types =
-    List.map (\type_ -> ( type_, [ getDecoderName type_ ] )) types |> Dict.fromList
+makeNameMapping suffix types =
+    List.map (\type_ -> ( type_, [ getDecoderName type_ suffix ] )) types |> Dict.fromList
 
 
 generateDecoders genContext graphHeads =
@@ -322,7 +328,7 @@ getExportSet typesDict name =
             Nothing
 
 
-makeDecodersModuleDecl stmt =
+makeDecodersModuleDecl genCommand stmt =
     let
         moduleName =
             case stmt of
@@ -336,7 +342,7 @@ makeDecodersModuleDecl stmt =
                     Debug.crash "Incorrect statement kind was passed!"
 
         newModuleName =
-            List.updateAt (List.length moduleName - 1) (\x -> x ++ "Decoders") moduleName
+            List.updateAt (List.length moduleName - 1) (\x -> x ++ (toString genCommand)) moduleName
                 |> fromJust "Impossibru!"
     in
         ModuleDeclaration newModuleName AllExport

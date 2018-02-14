@@ -25,6 +25,7 @@ ident i printRepr =
             Lines <| List.map (\printRepr -> ident i printRepr) lines
 
 
+makeLines : PrintRepr -> PrintRepr -> PrintRepr
 makeLines arg1 arg2 =
     case ( arg1, arg2 ) of
         ( Line _ _, Line _ _ ) ->
@@ -55,6 +56,23 @@ makeLines arg1 arg2 =
         _ ->
             Debug.crash "Failed to concatenate!"
 infixl 5 +>
+
+
+(:>) a b =
+    case ( a, b ) of
+        ( Line i str1, Line _ str2 ) ->
+            Line i (str1 ++ str2)
+
+        ( Line i str1, Lines lines ) ->
+            let
+                identedLines =
+                    List.map (\printRepr -> ident i printRepr) lines
+            in
+                Lines (a :: identedLines)
+
+        _ ->
+            Debug.crash "Failed to concatenate!"
+infixl 5 :>
 
 
 prepend line printRepr =

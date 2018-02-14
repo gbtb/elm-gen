@@ -50,10 +50,10 @@ makeCmd =
     Task.perform identity << Task.succeed
 
 
-getDecoderName typeName =
+getDecoderName typeName suffix =
     case String.uncons typeName of
         Just ( h, tail ) ->
-            String.cons (Char.toLower h) (tail ++ "Decoder")
+            String.cons (Char.toLower h) (tail ++ suffix)
 
         Nothing ->
             ""

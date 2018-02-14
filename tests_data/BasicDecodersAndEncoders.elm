@@ -15,6 +15,13 @@ basicDecoder =
         |> JD.required "d" (maybeDecoder JD.int)
 
 
+maybeDecoder decoder =
+    JD.oneOf
+        [ JD.null Nothing
+        , JD.map Just decoder
+        ]
+
+
 basicEncoder : Basic -> JE.Value
 basicEncoder value =
     JE.object
@@ -22,13 +29,6 @@ basicEncoder value =
         , ( "b", JE.float value.b )
         , ( "c", JE.string value.c )
         , ( "d", maybeEncoder JE.int value.d )
-        ]
-
-
-maybeDecoder decoder =
-    JD.oneOf
-        [ JD.null Nothing
-        , JD.map Just decoder
         ]
 
 
