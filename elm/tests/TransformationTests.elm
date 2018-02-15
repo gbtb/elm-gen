@@ -14,7 +14,10 @@ suite : Test
 suite =
     let
         context =
-            initContext "" Dict.empty
+            initContext True "" Dict.empty
+
+        encContext =
+            initContext False "" Dict.empty
     in
         describe "Ast transformation"
             [ describe "Multiple fields"
@@ -86,5 +89,11 @@ suite =
                         Expect.equal
                             (decodeUnionTypeArgs context "Cons2" [ TypeConstructor [ "String" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Float" ] [] ])
                             (Application (Application (Application (Application (variable "" "map3") (variable "" "Cons2")) (variable "" "string")) (variable "" "int")) (variable "" "float"))
+                ]
+            , describe "Encode and mapping"
+                [ test "can correctly encode list of ints" <|
+                    \_ ->
+                        Expect.equal (encodeType encContext <| TypeConstructor [ "List" ] ([ TypeConstructor [ "Int" ] [] ]))
+                            (Application (Application (Variable [ "listEncoder" ]) (Variable [ "int" ])) (Variable [ "l" ]))
                 ]
             ]

@@ -114,4 +114,14 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('generates both decoders and encoders for dependent on other files types' , () => {
+    shell.cd('dist');
+    shell.exec("./elm-gen d,e ../tests_data/DependentOnOtherFile.elm .");
+    expect(
+      readFile(outPath("DependentOnOtherFileDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("DependentOnOtherFileDecodersAndEncoders.elm"))
+    );
+  });
+
 })

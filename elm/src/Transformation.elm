@@ -16,23 +16,34 @@ type alias TransformationContext =
     }
 
 
-defaultContext =
-    initContext "JD" Dict.empty
+defaultContext isDecoders =
+    initContext isDecoders "JD" Dict.empty
 
 
-initContext prefix userDefinedTypes =
-    let
-        basicTypes =
-            [ "Int", "Float", "String", "List", "Array", "Char", "Bool" ]
+knownTypesForDecoders prefix =
+    [ "Int", "Float", "String", "List", "Array", "Char", "Bool" ]
+        |> List.map (\type_ -> ( type_, qualifiedName prefix (String.toLower type_) ))
+        |> Dict.fromList
 
-        basicTypesDecoders =
-            basicTypes
-                |> List.map (\type_ -> ( type_, qualifiedName prefix (String.toLower type_) ))
-                |> Dict.fromList
-    in
-        { decoderPrefix = prefix
-        , knownTypes = basicTypesDecoders |> Dict.union userDefinedTypes
-        }
+
+knownTypesForEncoders prefix =
+    ([ "Int", "Float", "String", "Char", "Bool" ]
+        |> List.map (\type_ -> ( type_, qualifiedName prefix (String.toLower type_) ))
+    )
+        ++ ([ "List", "Array" ] |> List.map (\type_ -> ( type_, qualifiedName prefix (getDecoderName type_ "Encoder") )))
+        |> Dict.fromList
+
+
+initContext isDecoders prefix userDefinedTypes =
+    { decoderPrefix = prefix
+    , knownTypes =
+        (if isDecoders then
+            knownTypesForDecoders prefix
+         else
+            knownTypesForEncoders prefix
+        )
+            |> Dict.union userDefinedTypes
+    }
 
 
 genDecoder : TransformationContext -> Statement -> List Statement
@@ -277,6 +288,17 @@ encodeType ctx type_ =
     case type_ of
         TypeConstructor [ typeName ] argsTypes ->
             encodeKnownTypeConstructor ctx typeName argsTypes
+
+        TypeTuple [ a ] ->
+            (encodeType ctx a)
+
+        TypeTuple l ->
+            case List.reverse <| List.indexedMap (\i x -> ( i, x )) l of
+                [] ->
+                    Debug.crash "Empty TypeTuple is not allowed!"
+
+                _ ->
+                    Debug.crash "Op"
 
         _ ->
             Debug.crash "Cannot encode this type yet?"

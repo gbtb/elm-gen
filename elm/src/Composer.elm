@@ -22,6 +22,7 @@ type alias GenContext =
     , userDefinedTypes : Dict.Dict String (List String)
     , generatorFunc : TransformationContext -> Statement -> List Statement
     , prefix : String
+    , isDecoders : Bool
     , maybeStub : Statement
     }
 
@@ -140,6 +141,7 @@ generate model =
                             userDefinedTypesDecoders
                             genDecoder
                             "JD"
+                            True
                             genMaybeDecoder
                         )
                         graphHeads
@@ -153,6 +155,7 @@ generate model =
                             userDefinedTypesEncoders
                             genEncoder
                             "JE"
+                            False
                             genMaybeEncoder
                         )
                         graphHeads
@@ -248,7 +251,7 @@ generateDecodersHelper genContext item =
                     if (extractDecoder >> asFilter) stmt then
                         Nothing
                     else
-                        Just <| genContext.generatorFunc (Transformation.initContext genContext.prefix genContext.userDefinedTypes) stmt
+                        Just <| genContext.generatorFunc (Transformation.initContext genContext.isDecoders genContext.prefix genContext.userDefinedTypes) stmt
 
                 Nothing ->
                     Debug.log "Type not found in types dict!" <| Nothing
