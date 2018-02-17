@@ -30,12 +30,6 @@ graphHelper knownTypes stmt ( nonHeads, graph ) =
     let
         retrievedDeps =
             getDependencies knownTypes stmt
-
-        updateGraphIfMaybe =
-            if Set.member "Maybe" retrievedDeps then
-                Dict.insert "Maybe" Set.empty
-            else
-                identity
     in
         case stmt of
             TypeDeclaration typeName _ ->
@@ -44,7 +38,8 @@ graphHelper knownTypes stmt ( nonHeads, graph ) =
                         getTypeName typeName
                 in
                     ( Set.union nonHeads retrievedDeps
-                    , Dict.update name (updateDependencies retrievedDeps) graph |> updateGraphIfMaybe
+                    , Dict.update name (updateDependencies retrievedDeps) graph
+                        |> (updateGraphForHardcodedTypes retrievedDeps)
                     )
 
             TypeAliasDeclaration typeName _ ->
@@ -54,11 +49,19 @@ graphHelper knownTypes stmt ( nonHeads, graph ) =
                 in
                     ( Set.union nonHeads retrievedDeps
                     , Dict.update name (updateDependencies retrievedDeps) graph
-                        |> updateGraphIfMaybe
+                        |> (updateGraphForHardcodedTypes retrievedDeps)
                     )
 
             _ ->
                 Debug.crash "Unsupported type"
+
+
+updateGraphForHardcodedTypes retrievedDeps d =
+    let
+        hard =
+            Set.intersect (Set.fromList [ "Maybe", "List", "Array" ]) retrievedDeps
+    in
+        Set.foldl (\item dict -> Dict.insert item Set.empty dict) d hard
 
 
 setdiff =

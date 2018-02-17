@@ -1,4 +1,4 @@
-module DependentOnOtherFileDecoders exposing (..)
+module DependentOnOtherFileDecodersAndEncoders exposing (..)
 
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
@@ -32,7 +32,7 @@ recordDecoder =
         |> JD.required "field2" basicDecoder
 
 
-basicEncoder : JE.Encoder Basic
+basicEncoder : Basic -> JE.Value
 basicEncoder value =
     case value of
         Trivial ->
@@ -45,7 +45,7 @@ basicEncoder value =
             JE.object [ ( "Cons2", listEncoder JE.string v1 ) ]
 
 
-dependentTypeEncoder : JE.Encoder DependentType
+dependentTypeEncoder : DependentType -> JE.Value
 dependentTypeEncoder value =
     case value of
         A ->
@@ -55,12 +55,17 @@ dependentTypeEncoder value =
             JE.object [ ( "B", basicEncoder v1 ) ]
 
         C v1 ->
-            JE.object [ ( "Cons2", listEncoder recordEncoder v1 ) ]
+            JE.object [ ( "C", recordEncoder v1 ) ]
 
 
-recordEncoder : JE.Encoder Record
+recordEncoder : Record -> JE.Value
 recordEncoder value =
     JE.object
-        [ ( "field1", arrayEncoder JE.float value.field1 )
+        [ ( "field1", listEncoder JE.float value.field1 )
         , ( "field2", basicEncoder value.field2 )
         ]
+
+
+listEncoder : (a -> Value) -> List a -> Value
+listEncoder enc =
+    JE.list <| List.map enc

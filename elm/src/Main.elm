@@ -111,7 +111,6 @@ updateAdditionalParse model parsedStatements fileNames genCommand =
 
                 Ok ( _, _, statements ) ->
                     statements |> applyMetaComments
-        , genCommand = genCommand
       }
     , Cmd.batch [ logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
     )

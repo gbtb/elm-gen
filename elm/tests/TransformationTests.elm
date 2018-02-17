@@ -42,23 +42,28 @@ suite =
                 [ test "Generates encoder for record type with one field" <|
                     \_ ->
                         Expect.equal
-                            (genEncoderForRecord context "Basic" <| (TypeRecord ([ ( "a", TypeConstructor [ "Int" ] [] ) ])))
+                            (genEncoderForRecord encContext "Basic" <| (TypeRecord ([ ( "a", TypeConstructor [ "Int" ] [] ) ])))
                             (Application (Variable [ "object" ]) (List ([ Tuple ([ String "a", Application (Variable [ "int" ]) (Access (Variable [ "value" ]) [ "a" ]) ]) ])))
                 , test "Generates encoder for record type with two fields" <|
                     \_ ->
                         Expect.equal
-                            (genEncoderForRecord context "Basic" <| ((TypeRecord ([ ( "a", TypeConstructor [ "Int" ] [] ), ( "b", TypeConstructor [ "String" ] [] ) ]))))
+                            (genEncoderForRecord encContext "Basic" <| ((TypeRecord ([ ( "a", TypeConstructor [ "Int" ] [] ), ( "b", TypeConstructor [ "String" ] [] ) ]))))
                             (Application (Variable [ "object" ]) (List ([ Tuple ([ String "a", Application (Variable [ "int" ]) (Access (Variable [ "value" ]) [ "a" ]) ]), Tuple ([ String "b", Application (Variable [ "string" ]) (Access (Variable [ "value" ]) [ "b" ]) ]) ])))
                 , test "Generates encoder for simple union type" <|
                     \_ ->
                         Expect.equal
-                            (genEncoderForUnionType context <| TypeDeclaration (TypeConstructor [ "T" ] []) ([ TypeConstructor [ "A" ] [], TypeConstructor [ "B" ] [], TypeConstructor [ "C" ] [] ]))
+                            (genEncoderForUnionType encContext <| TypeDeclaration (TypeConstructor [ "T" ] []) ([ TypeConstructor [ "A" ] [], TypeConstructor [ "B" ] [], TypeConstructor [ "C" ] [] ]))
                             (Case (Variable [ "value" ]) ([ ( Variable [ "A" ], Application (Variable [ "object" ]) (List ([ Tuple ([ String "A", Variable [ "null" ] ]) ])) ), ( Variable [ "B" ], Application (Variable [ "object" ]) (List ([ Tuple ([ String "B", Variable [ "null" ] ]) ])) ), ( Variable [ "C" ], Application (Variable [ "object" ]) (List ([ Tuple ([ String "C", Variable [ "null" ] ]) ])) ) ]))
                 , test "Generates encoder for non-trivial union type" <|
                     \_ ->
                         Expect.equal
-                            (genEncoderForUnionType context <| TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "A" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "B" ] ([ TypeConstructor [ "Float" ] [] ]) ]))
+                            (genEncoderForUnionType encContext <| TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "A" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "B" ] ([ TypeConstructor [ "Float" ] [] ]) ]))
                             (Case (Variable [ "value" ]) ([ ( Application (Variable [ "A" ]) (Variable [ "v1" ]), Application (Variable [ "object" ]) (List ([ Tuple ([ String "A", Application (Variable [ "int" ]) (Variable [ "v1" ]) ]) ])) ), ( Application (Variable [ "B" ]) (Variable [ "v1" ]), Application (Variable [ "object" ]) (List ([ Tuple ([ String "B", Application (Variable [ "float" ]) (Variable [ "v1" ]) ]) ])) ) ]))
+                , test "Generates encoder for union type with list" <|
+                    \_ ->
+                        Expect.equal
+                            (genEncoderForUnionType encContext <| TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "A" ] ([ TypeTuple ([ TypeConstructor [ "List" ] ([ TypeConstructor [ "Int" ] [] ]) ]) ]) ]))
+                            (Case (Variable [ "value" ]) ([ ( Application (Variable [ "A" ]) (Variable [ "v1" ]), Application (Variable [ "object" ]) (List ([ Tuple ([ String "A", Application (Application (Variable [ "listEncoder" ]) (Variable [ "int" ])) (Variable [ "v1" ]) ]) ])) ) ]))
                 ]
             , describe
                 "Complex fields"
@@ -94,6 +99,6 @@ suite =
                 [ test "can correctly encode list of ints" <|
                     \_ ->
                         Expect.equal (encodeType encContext <| TypeConstructor [ "List" ] ([ TypeConstructor [ "Int" ] [] ]))
-                            (Application (Application (Variable [ "listEncoder" ]) (Variable [ "int" ])) (Variable [ "l" ]))
+                            (Application (Variable [ "listEncoder" ]) (Variable [ "int" ]))
                 ]
             ]

@@ -30,7 +30,7 @@ knownTypesForEncoders prefix =
     ([ "Int", "Float", "String", "Char", "Bool" ]
         |> List.map (\type_ -> ( type_, qualifiedName prefix (String.toLower type_) ))
     )
-        ++ ([ "List", "Array" ] |> List.map (\type_ -> ( type_, qualifiedName prefix (getDecoderName type_ "Encoder") )))
+        ++ ([ "List", "Array" ] |> List.map (\type_ -> ( type_, qualifiedName "" (getDecoderName type_ "Encoder") )))
         |> Dict.fromList
 
 
@@ -118,14 +118,14 @@ genEncoder context stmt =
                 decoderName =
                     getDecoderName typeName "Encoder"
 
-                decoderType =
+                encoderType =
                     if String.length context.decoderPrefix > 0 then
-                        [ context.decoderPrefix, "Encoder" ]
+                        [ context.decoderPrefix, "Value" ]
                     else
-                        [ "Encoder" ]
+                        [ "Value" ]
             in
-                [ FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
-                , FunctionDeclaration (decoderName) [] <| genEncoderForUnionType context stmt
+                [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor [ typeName ] [])) (TypeConstructor encoderType [])
+                , FunctionDeclaration (decoderName) [ variable "" "value" ] <| genEncoderForUnionType context stmt
                 ]
 
         _ ->
@@ -143,7 +143,7 @@ genEncoderForUnionType : TransformationContext -> Statement -> Expression
 genEncoderForUnionType ctx unionType =
     let
         begin =
-            Case (variable ctx.decoderPrefix "value")
+            Case (variable "" "value")
     in
         case unionType of
             TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
@@ -377,6 +377,16 @@ genMaybeEncoder =
              ]
             )
         )
+
+
+genEncoderForMappable ctx typeName =
+    [ FunctionDeclaration "listEncoder"
+        ([ Variable [ "encoder" ] ])
+        (BinOp (Variable [ "<|" ])
+            (variable ctx.decoderPrefix (String.toLower typeName))
+            (Application (Access (variable "" typeName) [ "map" ]) (Variable [ "encoder" ]))
+        )
+    ]
 
 
 decodeKnownTypeConstructor ctx typeName argsTypes =

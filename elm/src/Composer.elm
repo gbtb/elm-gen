@@ -3,7 +3,7 @@ module Composer exposing (..)
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
-import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder, genMaybeEncoder, TransformationContext, genEncoder)
+import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder, genMaybeEncoder, TransformationContext, genEncoder, genEncoderForMappable)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
@@ -24,7 +24,12 @@ type alias GenContext =
     , prefix : String
     , isDecoders : Bool
     , maybeStub : Statement
+    , mappableStubs : Dict.Dict String (List Statement)
     }
+
+
+mappableStubs ctx =
+    Dict.fromList <| List.map (\i -> ( i, genEncoderForMappable ctx i )) [ "List", "Array" ]
 
 
 makeFileLoadRequest : Model -> Result String (Dict.Dict (List String) TypeSet)
@@ -143,6 +148,7 @@ generate model =
                             "JD"
                             True
                             genMaybeDecoder
+                            Dict.empty
                         )
                         graphHeads
                 else
@@ -157,6 +163,9 @@ generate model =
                             "JE"
                             False
                             genMaybeEncoder
+                            (mappableStubs
+                                { decoderPrefix = "JE" }
+                            )
                         )
                         graphHeads
                 else
@@ -242,19 +251,22 @@ generateDecodersHelper genContext item =
     if item == "Maybe" then
         Just [ genContext.maybeStub ]
     else
-        let
-            typeDeclaration =
-                Dict.get item genContext.typesDict
-        in
-            case typeDeclaration of
-                Just stmt ->
-                    if (extractDecoder >> asFilter) stmt then
-                        Nothing
-                    else
-                        Just <| genContext.generatorFunc (Transformation.initContext genContext.isDecoders genContext.prefix genContext.userDefinedTypes) stmt
+        Dict.get (Debug.log "i" item) genContext.mappableStubs
+            |> Maybe.orElse
+                (let
+                    typeDeclaration =
+                        Dict.get item genContext.typesDict
+                 in
+                    case typeDeclaration of
+                        Just stmt ->
+                            if (extractDecoder >> asFilter) stmt then
+                                Nothing
+                            else
+                                Just <| genContext.generatorFunc (Transformation.initContext genContext.isDecoders genContext.prefix genContext.userDefinedTypes) stmt
 
-                Nothing ->
-                    Debug.log "Type not found in types dict!" <| Nothing
+                        Nothing ->
+                            Debug.log "Type not found in types dict!" <| Nothing
+                )
 
 
 importFoldHelper : Statement -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) ) -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) )
