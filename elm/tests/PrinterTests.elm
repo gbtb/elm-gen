@@ -50,6 +50,11 @@ suite =
                     Expect.equal
                         (printExpression (Access (Variable [ "JD" ]) [ "null" ]))
                         (Line 0 "JD.null")
+            , test "Variable" <|
+                \_ ->
+                    Expect.equal
+                        (printExpression (Variable [ "JD", "index" ]))
+                        (Line 0 "JD.index")
             , test "Tuple" <|
                 \_ ->
                     Expect.equal
