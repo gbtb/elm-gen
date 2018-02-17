@@ -17,7 +17,7 @@ suite =
         [ test "can make correct module declaration for decoder" <|
             \_ ->
                 Expect.equal
-                    (makeDecodersModuleDecl <| ModuleDeclaration [ "Basic" ] AllExport)
+                    (makeDecodersModuleDecl Decoders <| ModuleDeclaration [ "Basic" ] AllExport)
                     (ModuleDeclaration [ "BasicDecoders" ] AllExport)
         , test "can store types in a dict" <|
             \_ ->

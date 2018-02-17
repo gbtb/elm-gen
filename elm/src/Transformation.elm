@@ -201,13 +201,19 @@ decodeUnionTypeArgs ctx name args =
             Application
                 (variable ctx.decoderPrefix <| getMapFun n)
                 (variable "" name)
+
+        indexAppl idx =
+            Application (Application (variable ctx.decoderPrefix "index") (Integer idx))
     in
         case args of
             [] ->
                 (Application (variable ctx.decoderPrefix "succeed") (variable "" name))
 
+            [ a ] ->
+                Application start (decodeType ctx a)
+
             l ->
-                List.foldl (\item accum -> Application accum (decodeType ctx item)) start l
+                List.indexedFoldl (\idx item accum -> Application accum (indexAppl idx <| decodeType ctx item)) start l
 
 
 encodeUnionTypeArgs ctx name args =

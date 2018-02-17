@@ -85,6 +85,6 @@ suite =
                     \_ ->
                         Expect.equal
                             (decodeUnionTypeArgs context "Cons2" [ TypeConstructor [ "String" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Float" ] [] ])
-                            (Application (Application (Application (Application (variable "" "map3") (variable "" "Cons2")) (variable "" "string")) (variable "" "int")) (variable "" "float"))
+                            (Application (Application (Application (Application (variable "" "map3") (variable "" "Cons2")) (Application (Application (Variable [ "index" ]) (Integer 0)) (variable "" "string"))) (Application (Application (Variable [ "index" ]) (Integer 1)) (variable "" "int"))) (Application (Application (Variable [ "index" ]) (Integer 2)) (variable "" "float")))
                 ]
             ]
