@@ -260,27 +260,28 @@ generateDecodersHelper genContext item =
     if item == "Maybe" then
         Just [ genContext.maybeStub ]
     else
-        Maybe.or (Dict.get item genContext.mappableStubs)
-            (let
-                typeDeclaration =
-                    Dict.get item genContext.typesDict
-             in
-                case typeDeclaration of
-                    Just stmt ->
-                        if (extractDecoder >> asFilter) stmt then
-                            Nothing
-                        else
-                            Just <|
-                                genContext.generatorFunc
-                                    (Transformation.initContext
-                                        genContext.isDecoders
-                                        genContext.prefix
-                                        genContext.userDefinedTypes
-                                    )
-                                    stmt
+        Maybe.orLazy (Dict.get item genContext.mappableStubs)
+            (\_ ->
+                let
+                    typeDeclaration =
+                        Dict.get item genContext.typesDict
+                in
+                    case typeDeclaration of
+                        Just stmt ->
+                            if (extractDecoder >> asFilter) stmt then
+                                Nothing
+                            else
+                                Just <|
+                                    genContext.generatorFunc
+                                        (Transformation.initContext
+                                            genContext.isDecoders
+                                            genContext.prefix
+                                            genContext.userDefinedTypes
+                                        )
+                                        stmt
 
-                    Nothing ->
-                        Debug.crash ("Type not found in types dict! " ++ item)
+                        Nothing ->
+                            Debug.crash ("Type not found in types dict! " ++ item ++ (toString genContext.mappableStubs))
             )
 
 
