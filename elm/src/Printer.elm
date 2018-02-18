@@ -16,11 +16,13 @@ type alias PrinterSettings =
 
 type alias PrintContext =
     { printedBinOp : Bool
+    , flatList : Bool
     }
 
 
 initContext =
     { printedBinOp = False
+    , flatList = False
     }
 
 
@@ -41,11 +43,11 @@ printExpression context e =
                 Line 0 <| String.join "." l
 
             Application func arg ->
-                printExpression defaultContext func
+                printExpression context func
                     +> if isSimpleExpression arg then
-                        printExpression defaultContext arg
+                        printExpression context arg
                        else
-                        printExpression defaultContext arg
+                        printExpression context arg
                             |> (if requireBraces arg then
                                     braces
                                 else
@@ -161,12 +163,19 @@ printList ctx exprList =
             (Line 0 "[" +> (printExpression ctx a) +> Line 0 "]")
 
         h :: cons ->
-            makeLines
-                (List.foldl (\accum item -> makeLines item accum)
+            if ctx.flatList then
+                (List.foldl (\accum item -> item :> accum)
                     (Line 0 "[" +> printExpression ctx h)
-                    (List.map (\expr -> printExpression ctx expr |> prepend (Line 0 ",")) cons)
+                    (List.map (\expr -> (Line 0 ",") +> printExpression ctx expr) cons)
                 )
-                (Line 0 "]")
+                    +> (Line 0 "]")
+            else
+                makeLines
+                    (List.foldl (\accum item -> makeLines item accum)
+                        (Line 0 "[" +> printExpression ctx h)
+                        (List.map (\expr -> printExpression ctx expr |> prepend (Line 0 ",")) cons)
+                    )
+                    (Line 0 "]")
 
 
 printTuple : PrintContext -> List Expression -> PrintRepr
@@ -178,7 +187,7 @@ printTuple ctx exprList =
         h :: cons ->
             (List.foldl (\accum item -> item :> accum)
                 (Line 0 "(" +> printExpression ctx h)
-                (List.map (\expr -> printExpression ctx expr |> prepend (Line 0 ",")) cons)
+                (List.map (\expr -> printExpression { ctx | flatList = True } expr |> prepend (Line 0 ",")) cons)
             )
                 +> (Line 0 ")")
 

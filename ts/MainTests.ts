@@ -126,4 +126,13 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('generates both decoders and encoders for multi-arg union constructors' , () => {
+    shell.exec("./elm-gen d,e ../tests_data/MetaComments.elm .");
+    expect(
+      readFile(outPath("MetaCommentsDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("MetaCommentsDecodersAndEncoders.elm"))
+    );
+  });
+
 })

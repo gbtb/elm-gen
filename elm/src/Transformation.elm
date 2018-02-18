@@ -182,7 +182,7 @@ genEncoderForUnionTypeConstructor ctx cons =
                   else
                     List.foldl (\item accum -> Application accum item) start (getDummyVariables n)
                 , (Application (variable ctx.decoderPrefix "object")
-                    (List <| [ Tuple <| (String name) :: encodeUnionTypeArgs ctx name args ])
+                    (List <| [ encodeUnionTypeArgs ctx name args ])
                   )
                 )
 
@@ -231,13 +231,22 @@ encodeUnionTypeArgs ctx name args =
     let
         n =
             List.length args
+
+        tup expr =
+            Tuple [ String name, expr ]
     in
         case args of
             [] ->
-                [ variable ctx.decoderPrefix "null" ]
+                tup <| variable ctx.decoderPrefix "null"
+
+            [ a ] ->
+                tup <| Application (encodeType ctx a) (variable "" "v1")
 
             l ->
-                List.map (\( type_, var ) -> Application (encodeType ctx type_) var) (List.zip l <| getDummyVariables n)
+                tup <|
+                    Application (variable ctx.decoderPrefix "list") <|
+                        List <|
+                            List.map (\( type_, var ) -> Application (encodeType ctx type_) var) (List.zip l <| getDummyVariables n)
 
 
 genDecoderForRecord : TransformationContext -> String -> Type -> Expression

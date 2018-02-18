@@ -54,6 +54,11 @@ suite =
                             , Line 1 "List.map encoder"
                             ]
                         )
+            , test "prints flat list" <|
+                \_ ->
+                    Expect.equal
+                        (Printer.printExpression { initContext | flatList = True } <| Application (Variable [ "list" ]) (List ([ Integer 1, Integer 2, Integer 3 ])))
+                        (Line 0 "list [ 1, 2, 3 ]")
             , test "Access" <|
                 \_ ->
                     Expect.equal

@@ -94,6 +94,11 @@ suite =
                         Expect.equal
                             (decodeUnionTypeArgs context "Cons2" [ TypeConstructor [ "String" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Float" ] [] ])
                             (Application (Application (Application (Application (variable "" "map3") (variable "" "Cons2")) (Application (Application (Variable [ "index" ]) (Integer 0)) (variable "" "string"))) (Application (Application (Variable [ "index" ]) (Integer 1)) (variable "" "int"))) (Application (Application (Variable [ "index" ]) (Integer 2)) (variable "" "float")))
+                , test "Correctly generates encoder for multi-arg constructors" <|
+                    \_ ->
+                        Expect.equal
+                            (encodeUnionTypeArgs context "Cons2" [ TypeConstructor [ "String" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Float" ] [] ])
+                            (Tuple [ String "Cons2", Application (Variable [ "list" ]) (List ([ Application (Variable [ "string" ]) (Variable [ "v1" ]), Application (Variable [ "int" ]) (Variable [ "v2" ]), Application (Variable [ "float" ]) (Variable [ "v3" ]) ])) ])
                 ]
             , describe "Encode and mapping"
                 [ test "can correctly encode list of ints" <|
