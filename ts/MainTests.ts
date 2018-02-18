@@ -55,7 +55,6 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   });
 
   it('for simple dependent types' , () => {
-    shell.cd('dist');
     shell.exec("./elm-gen d ../tests_data/DependentTypes.elm .");
     expect(
       readFile(outPath("DependentTypesDecoders.elm"))
@@ -65,7 +64,6 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   });
 
   it('for types splitted into two files' , () => {
-    shell.cd('dist');
     shell.exec("./elm-gen d ../tests_data/DependentOnOtherFile.elm .");
     expect(
       readFile(outPath("DependentOnOtherFileDecoders.elm"))
@@ -75,7 +73,6 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   });
 
   it('for three-levels deep type structure' , () => {
-    shell.cd('dist');
     shell.exec("./elm-gen d ../tests_data/ThreeLevelsDepth.elm .");
     expect(
       readFile(outPath("ThreeLevelsDepthDecoders.elm"))
@@ -85,7 +82,6 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   });
 
   it('can use provided decoders' , () => {
-    shell.cd('dist');
     shell.exec("./elm-gen d ../tests_data/WithDecoder.elm .");
     expect(
       readFile(outPath("WithDecoderDecoders.elm"))
@@ -95,7 +91,6 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   });
 
   it('understands meta comments' , () => {
-    shell.cd('dist');
     shell.exec("./elm-gen d ../tests_data/MetaComments.elm .");
     expect(
       readFile(outPath("MetaCommentsDecoders.elm"))
@@ -105,7 +100,6 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   });
 
   it('generates both decoders and encoders' , () => {
-    shell.cd('dist');
     shell.exec("./elm-gen d,e ../tests_data/Basic.elm .");
     expect(
       readFile(outPath("BasicDecodersAndEncoders.elm"))
@@ -115,12 +109,20 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   });
 
   it('generates both decoders and encoders for dependent on other files types' , () => {
-    shell.cd('dist');
     shell.exec("./elm-gen d,e ../tests_data/DependentOnOtherFile.elm .");
     expect(
       readFile(outPath("DependentOnOtherFileDecodersAndEncoders.elm"))
     ).to.equal(
       readFile(dataPath("DependentOnOtherFileDecodersAndEncoders.elm"))
+    );
+  });
+
+  it('generates both decoders and encoders for dependent types' , () => {
+    shell.exec("./elm-gen d,e ../tests_data/DependentTypes.elm .");
+    expect(
+      readFile(outPath("DependentTypesDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("DependentTypesDecodersAndEncoders.elm"))
     );
   });
 
