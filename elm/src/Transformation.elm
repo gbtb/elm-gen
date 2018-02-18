@@ -380,13 +380,21 @@ genMaybeEncoder =
 
 
 genEncoderForMappable ctx typeName =
-    [ FunctionDeclaration "listEncoder"
-        ([ Variable [ "encoder" ] ])
-        (BinOp (Variable [ "<|" ])
-            (variable ctx.decoderPrefix (String.toLower typeName))
-            (Application (Access (variable "" typeName) [ "map" ]) (Variable [ "encoder" ]))
-        )
-    ]
+    let
+        funcName =
+            ((String.toLower typeName) ++ "Encoder")
+    in
+        [ FunctionTypeDeclaration funcName
+            (TypeApplication (TypeApplication (TypeVariable "a") (TypeConstructor [ "Value" ] []))
+                (TypeApplication (TypeConstructor [ typeName ] ([ TypeVariable "a" ])) (TypeConstructor [ "Value" ] []))
+            )
+        , FunctionDeclaration funcName
+            ([ Variable [ "encoder" ] ])
+            (BinOp (Variable [ "<|" ])
+                (variable ctx.decoderPrefix (String.toLower typeName))
+                (Application (Access (variable "" typeName) [ "map" ]) (Variable [ "encoder" ]))
+            )
+        ]
 
 
 decodeKnownTypeConstructor ctx typeName argsTypes =

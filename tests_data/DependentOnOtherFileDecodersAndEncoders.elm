@@ -58,14 +58,15 @@ dependentTypeEncoder value =
             JE.object [ ( "C", recordEncoder v1 ) ]
 
 
+listEncoder : a -> Value -> List a -> Value
+listEncoder encoder =
+    JE.list <|
+        List.map encoder
+
+
 recordEncoder : Record -> JE.Value
 recordEncoder value =
     JE.object
         [ ( "field1", listEncoder JE.float value.field1 )
         , ( "field2", basicEncoder value.field2 )
         ]
-
-
-listEncoder : (a -> Value) -> List a -> Value
-listEncoder enc =
-    JE.list <| List.map enc

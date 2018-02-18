@@ -8,6 +8,4 @@ import WithDecoder exposing (R(..), aDecoder)
 
 rDecoder : JD.Decoder R
 rDecoder =
-    JD.oneOf
-        [ JD.field "Cons1" (JD.map Cons1 aDecoder)
-        ]
+    JD.oneOf [ JD.field "Cons1" (JD.map Cons1 aDecoder) ]

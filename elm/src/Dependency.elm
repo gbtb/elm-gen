@@ -10,7 +10,7 @@ import Utils exposing (..)
 
 knownTypes : Set.Set String
 knownTypes =
-    Set.fromList [ "Bool", "Char", "Int", "Float", "String", "List", "Array" ]
+    Set.fromList [ "Bool", "Char", "Int", "Float", "String" ]
 
 
 makeDependencyGraph : Set.Set String -> Set.Set String -> List Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) )

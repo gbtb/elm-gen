@@ -89,7 +89,9 @@ resolveDependencies model =
             model.dependencies
 
         ( newGraphHeads, newGraph ) =
-            makeDependencyGraph (List.foldl Set.union Set.empty <| Dict.values oldGraph) knownTypes types
+            makeDependencyGraph (List.foldl Set.union Set.empty <| Dict.values oldGraph)
+                (knownTypes)
+                types
 
         ( graphHeads, graph ) =
             ( Set.union newGraphHeads oldGraphHeads, Dict.union oldGraph newGraph )
@@ -99,7 +101,7 @@ resolveDependencies model =
                 |> List.foldl Set.union Set.empty
 
         unknownTypes =
-            Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict) |> Set.remove "Maybe"
+            Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict) |> (\s -> Set.diff s <| Set.fromList [ "Maybe", "List", "Array" ])
     in
         { model
             | typesDict = typesDict
@@ -127,6 +129,7 @@ generate model =
         userDefinedTypesDecoders =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
+                |> setdiff (Set.fromList [ "List", "Array" ])
                 |> Set.toList
                 |> makeNameMapping "Decoder"
 
@@ -240,8 +243,14 @@ makeNameMapping suffix types =
 
 generateDecoders genContext graphHeads =
     let
+        excludeTypes =
+            if genContext.isDecoders then
+                (Set.fromList [ "List", "Array" ])
+            else
+                Set.empty
+
         typesList =
-            Set.toList <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
+            Set.toList <| setdiff (excludeTypes) <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
     in
         List.map (generateDecodersHelper genContext) typesList |> Maybe.values
 
@@ -251,22 +260,28 @@ generateDecodersHelper genContext item =
     if item == "Maybe" then
         Just [ genContext.maybeStub ]
     else
-        Dict.get (Debug.log "i" item) genContext.mappableStubs
-            |> Maybe.orElse
-                (let
-                    typeDeclaration =
-                        Dict.get item genContext.typesDict
-                 in
-                    case typeDeclaration of
-                        Just stmt ->
-                            if (extractDecoder >> asFilter) stmt then
-                                Nothing
-                            else
-                                Just <| genContext.generatorFunc (Transformation.initContext genContext.isDecoders genContext.prefix genContext.userDefinedTypes) stmt
+        Maybe.or (Dict.get item genContext.mappableStubs)
+            (let
+                typeDeclaration =
+                    Dict.get item genContext.typesDict
+             in
+                case typeDeclaration of
+                    Just stmt ->
+                        if (extractDecoder >> asFilter) stmt then
+                            Nothing
+                        else
+                            Just <|
+                                genContext.generatorFunc
+                                    (Transformation.initContext
+                                        genContext.isDecoders
+                                        genContext.prefix
+                                        genContext.userDefinedTypes
+                                    )
+                                    stmt
 
-                        Nothing ->
-                            Debug.log "Type not found in types dict!" <| Nothing
-                )
+                    Nothing ->
+                        Debug.crash ("Type not found in types dict! " ++ item)
+            )
 
 
 importFoldHelper : Statement -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) ) -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) )
