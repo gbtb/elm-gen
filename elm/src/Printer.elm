@@ -54,18 +54,7 @@ printExpression context e =
                             |> ident 1
 
             BinOp op arg1 arg2 ->
-                let
-                    rightPart argContext =
-                        prepend (printExpression defaultContext op) (printExpression argContext arg2)
-                in
-                    if (isSimpleExpression arg2) then
-                        prepend (printExpression defaultContext arg1) (rightPart initContext)
-                    else
-                        makeLines (printExpression defaultContext arg1) <|
-                            if not context.printedBinOp then
-                                ident 1 <| rightPart { context | printedBinOp = True }
-                            else
-                                rightPart { context | printedBinOp = True }
+                printBinOp context op arg1 arg2
 
             Access (Variable [ prefix ]) names ->
                 Line 0 (String.join "." (prefix :: names))
@@ -131,8 +120,35 @@ printType type_ =
         TypeApplication tc1 tc2 ->
             printType tc1 ++ " -> " ++ printType tc2
 
+        TypeVariable name ->
+            name
+
         _ ->
             Debug.crash "Cannot print this type(yet?)"
+
+
+printBinOp context op arg1 arg2 =
+    let
+        rightPart op argContext arg2 =
+            if isLeftAssoc op then
+                prepend (printExpression initContext op) (printExpression argContext arg2)
+            else
+                (printExpression argContext arg2)
+
+        leftPart op argContext arg1 =
+            if isLeftAssoc op then
+                (printExpression argContext arg1)
+            else
+                prepend (printExpression argContext arg1) (printExpression initContext op)
+    in
+        if (isSimpleExpression arg2) then
+            prepend (leftPart op initContext arg1) (rightPart op initContext arg2)
+        else
+            makeLines (leftPart op initContext arg1) <|
+                if not context.printedBinOp then
+                    ident 1 <| rightPart op { context | printedBinOp = True } arg2
+                else
+                    rightPart op { context | printedBinOp = True } arg2
 
 
 printList : PrintContext -> List Expression -> PrintRepr
@@ -277,6 +293,18 @@ requireBraces e =
             False
 
         Tuple _ ->
+            False
+
+        _ ->
+            True
+
+
+isLeftAssoc binOp =
+    case binOp of
+        Variable [ "|>" ] ->
+            True
+
+        Variable [ "<|" ] ->
             False
 
         _ ->

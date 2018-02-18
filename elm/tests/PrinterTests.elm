@@ -45,6 +45,15 @@ suite =
                                 "|> required \"b\" int"
                             ]
                         )
+            , test "prints right assoc pipe bin op" <|
+                \_ ->
+                    Expect.equal
+                        (printExpression (BinOp (Variable [ "<|" ]) (Access (Variable [ "JE" ]) [ "list" ]) (Application (Access (Variable [ "List" ]) [ "map" ]) (Variable [ "encoder" ]))))
+                        (Lines
+                            [ Line 0 "JE.list <|"
+                            , Line 1 "List.map encoder"
+                            ]
+                        )
             , test "Access" <|
                 \_ ->
                     Expect.equal
