@@ -6,6 +6,7 @@ import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 import Composer exposing (..)
+import StatementFilters exposing (..)
 import Model exposing (..)
 import Dict
 import Set
@@ -61,4 +62,14 @@ suite =
                             , ( [ "Rel", "Module3" ], Set.fromList [ "Type4" ] )
                             ]
                     )
+        , test "can extract encoders" <|
+            \_ ->
+                Expect.equal
+                    (extractEncoder [ "Value" ] <| FunctionTypeDeclaration "listEncoder" (TypeApplication (TypeApplication (TypeVariable "a") (TypeConstructor [ "Value" ] [])) (TypeApplication (TypeConstructor [ "List" ] ([ TypeVariable "a" ])) (TypeConstructor [ "Value" ] []))))
+                    (Just ( "List", "listEncoder" ))
+        , test "can extract encoders 2" <|
+            \_ ->
+                Expect.equal
+                    (extractEncoder [ "Value" ] <| FunctionTypeDeclaration "basicEncoder" (TypeApplication (TypeConstructor [ "Basic" ] []) (TypeConstructor [ "Value" ] [])))
+                    (Just ( "Basic", "basicEncoder" ))
         ]

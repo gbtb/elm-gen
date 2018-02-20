@@ -42,6 +42,8 @@ type alias Model =
     , dependencies : ( TypeSet, Dict.Dict String TypeSet )
     , importsDict : Dict.Dict (List String) TypeSet
     , moduleDeclaration : Statement
+    , providedDecoders : Dict.Dict String String
+    , providedEncoders : Dict.Dict String String
     , generatedDecoders : List (List Statement)
     , generatedEncoders : List (List Statement)
     }
@@ -57,6 +59,8 @@ initModel =
     , dependencies = ( Set.empty, Dict.empty )
     , importsDict = Dict.empty
     , moduleDeclaration = Comment "Init placeholder"
+    , providedDecoders = Dict.empty
+    , providedEncoders = Dict.empty
     , generatedDecoders = []
     , generatedEncoders = []
     }

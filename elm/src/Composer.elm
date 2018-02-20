@@ -28,6 +28,14 @@ type alias GenContext =
     }
 
 
+decTcName =
+    [ "JD", "Decoder" ]
+
+
+encTcName =
+    [ "JE", "Value" ]
+
+
 mappableStubs ctx =
     Dict.fromList <| List.map (\i -> ( i, genEncoderForMappable ctx i )) [ "List", "Array" ]
 
@@ -64,7 +72,14 @@ resolveDependencies model =
                     model.parsedStatements
 
         decoders =
-            List.filter (extractDecoder >> asFilter) <|
+            List.filter (extractDecoder decTcName >> asFilter) <|
+                if not firstCall then
+                    model.newlyParsedStatements
+                else
+                    model.parsedStatements
+
+        encoders =
+            List.filter (extractEncoder decTcName >> asFilter) <|
                 if not firstCall then
                     model.newlyParsedStatements
                 else
@@ -73,6 +88,8 @@ resolveDependencies model =
         decodersDict =
             makeDecodersDict decoders
 
+        --providedEncoders =
+        --makeEncodersDict encoders
         moduleName =
             List.find (extractModuleDeclaration >> asFilter) model.parsedStatements
                 |> Maybe.andThen extractModuleDeclaration
@@ -208,7 +225,7 @@ getTypes decoders unknownTypes =
                 |> Maybe.andThen
                     (\( consName, _ ) ->
                         Dict.get consName decoders
-                            |> Maybe.andThen extractDecoderName
+                            |> Maybe.andThen (extractDecoderName decTcName)
                             |> Maybe.orElse
                                 (if Set.member consName unknownTypes then
                                     Nothing
@@ -226,7 +243,7 @@ makeTypesDict types =
 makeDecodersDict decoders =
     List.foldl
         (\item accumDict ->
-            case extractDecoder item of
+            case extractDecoder decTcName item of
                 Just decodedType ->
                     Dict.insert decodedType item accumDict
 
@@ -268,7 +285,7 @@ generateDecodersHelper genContext item =
                 in
                     case typeDeclaration of
                         Just stmt ->
-                            if (extractDecoder >> asFilter) stmt then
+                            if (extractDecoder [ "JD", "Decoder" ] >> asFilter) stmt then
                                 Nothing
                             else
                                 Just <|

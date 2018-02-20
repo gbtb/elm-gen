@@ -46,11 +46,11 @@ extractImport s =
             Nothing
 
 
-extractDecoder s =
+extractDecoder tcName s =
     case s of
         FunctionTypeDeclaration name type_ ->
             case type_ of
-                TypeConstructor [ "JD", "Decoder" ] [ TypeConstructor [ typeName ] [] ] ->
+                TypeConstructor tcName [ TypeConstructor [ typeName ] [] ] ->
                     Just typeName
 
                 _ ->
@@ -60,15 +60,36 @@ extractDecoder s =
             Nothing
 
 
-extractDecoderName s =
+extractDecoderName tcName s =
     case s of
         FunctionTypeDeclaration name type_ ->
             case type_ of
-                TypeConstructor [ "JD", "Decoder" ] [ TypeConstructor [ typeName ] [] ] ->
+                TypeConstructor tcName [ TypeConstructor [ typeName ] [] ] ->
                     Just name
 
                 _ ->
                     Nothing
+
+        _ ->
+            Nothing
+
+
+extractEncoder tcName s =
+    case s of
+        FunctionTypeDeclaration name type_ ->
+            eeHelper tcName type_ |> Maybe.map (\typeName -> ( typeName, name ))
+
+        _ ->
+            Nothing
+
+
+eeHelper tcName s =
+    case s of
+        TypeApplication (TypeConstructor [ typeName ] _) (TypeConstructor tcName []) ->
+            Just typeName
+
+        TypeApplication s1 s2 ->
+            eeHelper tcName s2
 
         _ ->
             Nothing
