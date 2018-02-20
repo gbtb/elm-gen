@@ -82,7 +82,7 @@ resolveDependencies model =
 
         encoders =
             Dict.fromList <|
-                List.filterMap (extractDecoder encTcName) <|
+                List.filterMap (extractEncoder encTcName) <|
                     if not firstCall then
                         model.newlyParsedStatements
                     else
@@ -154,6 +154,7 @@ generate model =
         userDefinedTypesEncoders =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
+                |> Set.union (keysSet model.providedEncoders)
                 |> Set.toList
                 |> makeNameMapping "Encoder"
     in
@@ -164,7 +165,7 @@ generate model =
                     generateDecoders
                         (GenContext model.typesDict
                             graph
-                            (Debug.log "d" userDefinedTypesDecoders)
+                            (userDefinedTypesDecoders)
                             (keysSet model.providedDecoders)
                             genDecoder
                             "JD"
@@ -257,7 +258,7 @@ generateDecoders genContext graphHeads =
                     Set.empty
 
         typesList =
-            Set.toList <| setdiff (excludeTypes) <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
+            Set.toList <| setdiff (Debug.log "excl" excludeTypes) <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
     in
         List.map (generateDecodersHelper genContext) typesList |> Maybe.values
 
@@ -275,17 +276,14 @@ generateDecodersHelper genContext item =
                 in
                     case typeDeclaration of
                         Just stmt ->
-                            if (extractDecoder [ "JD", "Decoder" ] >> asFilter) stmt then
-                                Nothing
-                            else
-                                Just <|
-                                    genContext.generatorFunc
-                                        (Transformation.initContext
-                                            genContext.isDecoders
-                                            genContext.prefix
-                                            genContext.userDefinedTypes
-                                        )
-                                        stmt
+                            Just <|
+                                genContext.generatorFunc
+                                    (Transformation.initContext
+                                        genContext.isDecoders
+                                        genContext.prefix
+                                        genContext.userDefinedTypes
+                                    )
+                                    stmt
 
                         Nothing ->
                             Debug.crash ("Type not found in types dict! " ++ item ++ (toString genContext.mappableStubs))
