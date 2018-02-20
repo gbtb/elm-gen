@@ -20,6 +20,7 @@ type alias GenContext =
     { typesDict : Dict.Dict String Statement
     , graph : Dict.Dict String TypeSet
     , userDefinedTypes : Dict.Dict String (List String)
+    , excludedTypes : TypeSet
     , generatorFunc : TransformationContext -> Statement -> List Statement
     , prefix : String
     , isDecoders : Bool
@@ -72,35 +73,32 @@ resolveDependencies model =
                     model.parsedStatements
 
         decoders =
-            List.filter (extractDecoder decTcName >> asFilter) <|
-                if not firstCall then
-                    model.newlyParsedStatements
-                else
-                    model.parsedStatements
+            Dict.fromList <|
+                List.filterMap (extractDecoder decTcName) <|
+                    if not firstCall then
+                        model.newlyParsedStatements
+                    else
+                        model.parsedStatements
 
         encoders =
-            List.filter (extractEncoder decTcName >> asFilter) <|
-                if not firstCall then
-                    model.newlyParsedStatements
-                else
-                    model.parsedStatements
+            Dict.fromList <|
+                List.filterMap (extractDecoder encTcName) <|
+                    if not firstCall then
+                        model.newlyParsedStatements
+                    else
+                        model.parsedStatements
 
-        decodersDict =
-            makeDecodersDict decoders
-
-        --providedEncoders =
-        --makeEncodersDict encoders
         moduleName =
             List.find (extractModuleDeclaration >> asFilter) model.parsedStatements
                 |> Maybe.andThen extractModuleDeclaration
                 |> fromJust "Module declaration not found!"
 
         importsDict =
-            Dict.fromList [ ( moduleName, Set.fromList <| getTypes decodersDict unknownTypes model.parsedStatements ) ]
+            Dict.fromList [ ( moduleName, Set.fromList <| getTypes decoders encoders unknownTypes model.parsedStatements ) ]
 
         typesDict =
             Dict.union model.typesDict <|
-                Dict.union (decodersDict) (makeTypesDict types)
+                (makeTypesDict types)
 
         ( oldGraphHeads, oldGraph ) =
             model.dependencies
@@ -125,6 +123,8 @@ resolveDependencies model =
             , unknownTypes = unknownTypes
             , dependencies = ( graphHeads, graph )
             , newlyParsedStatements = []
+            , providedDecoders = Dict.union decoders model.providedDecoders
+            , providedEncoders = Dict.union encoders model.providedEncoders
             , importsDict =
                 if firstCall then
                     importsDict
@@ -147,6 +147,7 @@ generate model =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
                 |> setdiff (Set.fromList [ "List", "Array" ])
+                |> Set.union (keysSet model.providedDecoders)
                 |> Set.toList
                 |> makeNameMapping "Decoder"
 
@@ -163,7 +164,8 @@ generate model =
                     generateDecoders
                         (GenContext model.typesDict
                             graph
-                            userDefinedTypesDecoders
+                            (Debug.log "d" userDefinedTypesDecoders)
+                            (keysSet model.providedDecoders)
                             genDecoder
                             "JD"
                             True
@@ -179,6 +181,7 @@ generate model =
                         (GenContext model.typesDict
                             graph
                             userDefinedTypesEncoders
+                            (keysSet model.providedEncoders)
                             genEncoder
                             "JE"
                             False
@@ -217,15 +220,15 @@ printDecoders decoders =
         List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
-getTypes : Dict.Dict String Statement -> Set.Set String -> List Statement -> List String
-getTypes decoders unknownTypes =
+getTypes : Dict.Dict String String -> Dict.Dict String String -> Set.Set String -> List Statement -> List String
+getTypes decoders encoders unknownTypes =
     List.filterMap
         (\s ->
             extractType s
                 |> Maybe.andThen
                     (\( consName, _ ) ->
                         Dict.get consName decoders
-                            |> Maybe.andThen (extractDecoderName decTcName)
+                            |> Maybe.orElse (Dict.get consName encoders)
                             |> Maybe.orElse
                                 (if Set.member consName unknownTypes then
                                     Nothing
@@ -240,20 +243,6 @@ makeTypesDict types =
     List.foldl (\item accumDict -> Dict.insert (getTypeNameFromStatement item) item accumDict) Dict.empty types
 
 
-makeDecodersDict decoders =
-    List.foldl
-        (\item accumDict ->
-            case extractDecoder decTcName item of
-                Just decodedType ->
-                    Dict.insert decodedType item accumDict
-
-                Nothing ->
-                    accumDict
-        )
-        Dict.empty
-        decoders
-
-
 makeNameMapping suffix types =
     List.map (\type_ -> ( type_, [ getDecoderName type_ suffix ] )) types |> Dict.fromList
 
@@ -261,10 +250,11 @@ makeNameMapping suffix types =
 generateDecoders genContext graphHeads =
     let
         excludeTypes =
-            if genContext.isDecoders then
-                (Set.fromList [ "List", "Array" ])
-            else
-                Set.empty
+            Set.union genContext.excludedTypes <|
+                if genContext.isDecoders then
+                    (Set.fromList [ "List", "Array" ])
+                else
+                    Set.empty
 
         typesList =
             Set.toList <| setdiff (excludeTypes) <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph

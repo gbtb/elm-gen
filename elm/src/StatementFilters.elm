@@ -51,7 +51,7 @@ extractDecoder tcName s =
         FunctionTypeDeclaration name type_ ->
             case type_ of
                 TypeConstructor tcName [ TypeConstructor [ typeName ] [] ] ->
-                    Just typeName
+                    Just ( typeName, name )
 
                 _ ->
                     Nothing

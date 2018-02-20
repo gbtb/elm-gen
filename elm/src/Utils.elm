@@ -5,6 +5,8 @@ import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 import Task
 import Char
+import Set
+import Dict
 
 
 fromJust err m =
@@ -48,6 +50,10 @@ getTypeNameFromStatement st =
 
 makeCmd =
     Task.perform identity << Task.succeed
+
+
+keysSet d =
+    Set.fromList <| Dict.keys d
 
 
 getDecoderName typeName suffix =
