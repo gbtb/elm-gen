@@ -153,4 +153,13 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('can use both provided encoders & decoders' , () => {
+    shell.exec("./elm-gen d,e ../tests_data/WithBoth.elm .");
+    expect(
+      readFile(outPath("WithBothDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("WithBothDecodersAndEncoders.elm"))
+    );
+  });
+
 })

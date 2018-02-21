@@ -392,16 +392,22 @@ genEncoderForMappable ctx typeName =
     let
         funcName =
             ((String.toLower typeName) ++ "Encoder")
+
+        value =
+            TypeConstructor (qualifiedName ctx.decoderPrefix "Value") []
     in
         [ FunctionTypeDeclaration funcName
-            (TypeApplication (TypeApplication (TypeVariable "a") (TypeConstructor [ "Value" ] []))
-                (TypeApplication (TypeConstructor [ typeName ] ([ TypeVariable "a" ])) (TypeConstructor [ "Value" ] []))
+            (TypeApplication
+                (TypeApplication (TypeVariable "a")
+                    (value)
+                )
+                (TypeApplication (TypeConstructor [ typeName ] ([ TypeVariable "a" ])) (value))
             )
         , FunctionDeclaration funcName
-            ([ Variable [ "encoder" ] ])
+            ([ Variable [ "encoder" ], Variable [ "value" ] ])
             (BinOp (Variable [ "<|" ])
                 (variable ctx.decoderPrefix (String.toLower typeName))
-                (Application (Access (variable "" typeName) [ "map" ]) (Variable [ "encoder" ]))
+                (Application (Application (Access (variable "" typeName) [ "map" ]) (Variable [ "encoder" ])) (Variable [ "value" ]))
             )
         ]
 

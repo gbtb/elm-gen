@@ -1,6 +1,6 @@
 module DependentOnOtherFile exposing (..)
 
-import DependentTypes exposing (Basic(..), Record(..))
+import DependentTypes exposing (Basic(..), Record)
 
 
 type DependentType
