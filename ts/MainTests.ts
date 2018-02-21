@@ -135,12 +135,21 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
-  it('can use provided decoders and encoders' , () => {
+  it('can use provided decoders' , () => {
     shell.exec("./elm-gen d,e ../tests_data/WithDecoder.elm .");
     expect(
       readFile(outPath("WithDecoderDecodersAndEncoders.elm"))
     ).to.equal(
       readFile(dataPath("WithDecoderDecodersAndEncoders.elm"))
+    );
+  });
+
+  it('can use provided encoders' , () => {
+    shell.exec("./elm-gen d,e ../tests_data/WithEncoder.elm .");
+    expect(
+      readFile(outPath("WithEncoderDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("WithEncoderDecodersAndEncoders.elm"))
     );
   });
 

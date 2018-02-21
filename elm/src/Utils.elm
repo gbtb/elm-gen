@@ -7,6 +7,7 @@ import Task
 import Char
 import Set
 import Dict
+import Model exposing (GenCommand(..))
 
 
 fromJust err m =
@@ -63,3 +64,11 @@ getDecoderName typeName suffix =
 
         Nothing ->
             ""
+
+
+willGenDecoder genCommand =
+    genCommand == Decoders || genCommand == DecodersAndEncoders
+
+
+willGenEncoder genCommand =
+    genCommand == Encoders || genCommand == DecodersAndEncoders

@@ -94,7 +94,7 @@ resolveDependencies model =
                 |> fromJust "Module declaration not found!"
 
         importsDict =
-            Dict.fromList [ ( moduleName, Set.fromList <| getTypes decoders encoders unknownTypes model.parsedStatements ) ]
+            Dict.fromList [ ( moduleName, Set.fromList <| getTypes model.genCommand decoders encoders unknownTypes model.parsedStatements ) ]
 
         typesDict =
             Dict.union model.typesDict <|
@@ -221,23 +221,39 @@ printDecoders decoders =
         List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
-getTypes : Dict.Dict String String -> Dict.Dict String String -> Set.Set String -> List Statement -> List String
-getTypes decoders encoders unknownTypes =
-    List.filterMap
-        (\s ->
-            extractType s
-                |> Maybe.andThen
-                    (\( consName, _ ) ->
-                        Dict.get consName decoders
-                            |> Maybe.orElse (Dict.get consName encoders)
-                            |> Maybe.orElse
-                                (if Set.member consName unknownTypes then
-                                    Nothing
-                                 else
-                                    Just consName
-                                )
-                    )
-        )
+getTypes : GenCommand -> Dict.Dict String String -> Dict.Dict String String -> Set.Set String -> List Statement -> List String
+getTypes genCommand decoders encoders unknownTypes lst =
+    List.sort <|
+        List.concat <|
+            List.filterMap
+                (\s ->
+                    extractType s
+                        |> Maybe.map
+                            (\( consName, _ ) ->
+                                let
+                                    decoder =
+                                        Dict.get consName decoders
+
+                                    encoder =
+                                        Dict.get consName encoders
+
+                                    typeItself =
+                                        if
+                                            (Maybe.isNothing decoder && willGenDecoder genCommand)
+                                                || (Maybe.isNothing encoder && willGenEncoder genCommand)
+                                        then
+                                            (if Set.member consName unknownTypes then
+                                                Nothing
+                                             else
+                                                Just consName
+                                            )
+                                        else
+                                            Nothing
+                                in
+                                    List.filterMap identity [ decoder, encoder, typeItself ]
+                            )
+                )
+                lst
 
 
 makeTypesDict types =
