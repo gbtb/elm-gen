@@ -147,16 +147,16 @@ generate model =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
                 |> setdiff (Set.fromList [ "List", "Array" ])
-                |> Set.union (keysSet model.providedDecoders)
                 |> Set.toList
                 |> makeNameMapping "Decoder"
+                |> Dict.union (Dict.map (\_ v -> [ v ]) model.providedDecoders)
 
         userDefinedTypesEncoders =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
-                |> Set.union (keysSet model.providedEncoders)
                 |> Set.toList
                 |> makeNameMapping "Encoder"
+                |> Dict.union (Dict.map (\_ v -> [ v ]) model.providedEncoders)
     in
         { model
             | moduleDeclaration = moduleDeclaration
