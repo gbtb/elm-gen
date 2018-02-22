@@ -42,7 +42,7 @@ initContext isDecoders prefix userDefinedTypes =
          else
             knownTypesForEncoders prefix
         )
-            |> Dict.union (Debug.log "context:" userDefinedTypes)
+            |> Dict.union userDefinedTypes
     }
 
 

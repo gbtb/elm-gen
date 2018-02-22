@@ -274,7 +274,7 @@ generateDecoders genContext graphHeads =
                     Set.empty
 
         typesList =
-            Set.toList <| setdiff (Debug.log "excl" excludeTypes) <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
+            Set.toList <| setdiff excludeTypes <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
     in
         List.map (generateDecodersHelper genContext) typesList |> Maybe.values
 

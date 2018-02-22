@@ -162,4 +162,13 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('for three-levels deep type structure' , () => {
+    shell.exec("./elm-gen d,e ../tests_data/ThreeLevelsDepth.elm .");
+    expect(
+      readFile(outPath("ThreeLevelsDepthDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("ThreeLevelsDepthDecodersAndEncoders.elm"))
+    );
+  });
+
 })
