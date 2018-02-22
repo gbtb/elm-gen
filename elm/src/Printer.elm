@@ -6,6 +6,7 @@ import Ast.Expression exposing (..)
 import List.Extra as List
 import Utils exposing (..)
 import PrintRepr exposing (..)
+import StatementFilters exposing (..)
 
 
 type alias PrinterSettings =
@@ -17,12 +18,14 @@ type alias PrinterSettings =
 type alias PrintContext =
     { printedBinOp : Bool
     , flatList : Bool
+    , nestedTypeApplication : Bool
     }
 
 
 initContext =
     { printedBinOp = False
     , flatList = False
+    , nestedTypeApplication = False
     }
 
 
@@ -100,10 +103,10 @@ printStatement stmt =
 
 
 printFunctionTypeDeclaration name type_ =
-    Line 0 <| name ++ " : " ++ printType type_
+    Line 0 <| name ++ " : " ++ printType initContext type_
 
 
-printType type_ =
+printType ctx type_ =
     case type_ of
         TypeConstructor qualifiedType typesList ->
             String.join "." qualifiedType
@@ -112,15 +115,24 @@ printType type_ =
                     else
                         ""
                    )
-                ++ (String.join " " <| List.map printType typesList)
+                ++ (String.join " " <| List.map (printType { ctx | nestedTypeApplication = False }) typesList)
 
         TypeTuple typesList ->
             "("
-                ++ (List.map printType typesList |> String.join " ")
+                ++ (List.map (printType { ctx | nestedTypeApplication = False }) typesList |> String.join " ")
                 ++ ")"
 
         TypeApplication tc1 tc2 ->
-            printType tc1 ++ " -> " ++ printType tc2
+            let
+                str =
+                    printType { ctx | nestedTypeApplication = True } tc1
+                        ++ " -> "
+                        ++ printType { ctx | nestedTypeApplication = False } tc2
+            in
+                if ctx.nestedTypeApplication then
+                    "(" ++ str ++ ")"
+                else
+                    str
 
         TypeVariable name ->
             name

@@ -46,6 +46,15 @@ extractImport s =
             Nothing
 
 
+extractFunctionTypeDecl s =
+    case s of
+        FunctionTypeDeclaration name stmnt ->
+            Just name
+
+        _ ->
+            Nothing
+
+
 extractDecoder tcName s =
     case s of
         FunctionTypeDeclaration name type_ ->

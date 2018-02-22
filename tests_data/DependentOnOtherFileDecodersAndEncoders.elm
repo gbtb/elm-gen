@@ -58,7 +58,7 @@ dependentTypeEncoder value =
             JE.object [ ( "C", recordEncoder v1 ) ]
 
 
-listEncoder : a -> JE.Value -> List a -> JE.Value
+listEncoder : (a -> JE.Value) -> List a -> JE.Value
 listEncoder encoder value =
     JE.list <|
         List.map encoder value

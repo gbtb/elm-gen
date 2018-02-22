@@ -85,6 +85,11 @@ suite =
                             , Line 1 "a + b"
                             ]
                         )
+            , test "prints function type decl with nested func args" <|
+                \_ ->
+                    Expect.equal
+                        (Printer.printStatement <| FunctionTypeDeclaration "listEncoder" (TypeApplication (TypeApplication (TypeVariable "a") (TypeConstructor [ "JE", "Value" ] [])) (TypeApplication (TypeConstructor [ "List" ] ([ TypeVariable "a" ])) (TypeConstructor [ "JE", "Value" ] []))))
+                        (Line 0 "listEncoder : (a -> JE.Value) -> List a -> JE.Value")
             , test "Simple decoder" <|
                 \_ ->
                     Expect.equal
@@ -99,12 +104,12 @@ suite =
             , test "type1" <|
                 \_ ->
                     Expect.equal
-                        (printType <| TypeConstructor [ "JD", "Decoder" ] ([ TypeConstructor [ "String" ] [] ]))
+                        (printType initContext <| TypeConstructor [ "JD", "Decoder" ] ([ TypeConstructor [ "String" ] [] ]))
                         ("JD.Decoder String")
             , test "type2" <|
                 \_ ->
                     Expect.equal
-                        (printType <| TypeConstructor [ "Dict" ] ([ TypeConstructor [ "Int" ] [], TypeTuple ([ TypeConstructor [ "List" ] ([ TypeConstructor [ "Char" ] [] ]) ]) ]))
+                        (printType initContext <| TypeConstructor [ "Dict" ] ([ TypeConstructor [ "Int" ] [], TypeTuple ([ TypeConstructor [ "List" ] ([ TypeConstructor [ "Char" ] [] ]) ]) ]))
                         ("Dict Int (List Char)")
             ]
         ]
