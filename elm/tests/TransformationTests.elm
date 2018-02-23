@@ -106,4 +106,11 @@ suite =
                         Expect.equal (encodeType encContext <| TypeConstructor [ "List" ] ([ TypeConstructor [ "Int" ] [] ]))
                             (Application (Variable [ "listEncoder" ]) (Variable [ "int" ]))
                 ]
+            , test "Generates decoder with default constructor" <|
+                \_ ->
+                    Expect.equal
+                        (genDecoderForUnionType { context | assumeUnionTypeDefaultConstructor = True } <|
+                            TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "Trivial" ] [], TypeConstructor [ "Cons1" ] ([ TypeConstructor [ "Int" ] [] ]) ])
+                        )
+                        (Application (Variable [ "oneOf" ]) (List ([ Application (Application (Variable [ "field" ]) (String "Trivial")) (Application (Variable [ "succeed" ]) (Variable [ "Trivial" ])), Application (Application (Variable [ "field" ]) (String "Cons1")) (Application (Application (Variable [ "map" ]) (Variable [ "Cons1" ])) (Variable [ "int" ])), Application (Variable [ "succeed" ]) (Variable [ "Trivial" ]) ])))
             ]

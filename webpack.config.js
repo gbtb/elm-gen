@@ -9,7 +9,6 @@ module.exports = {
     "elm-gen":   './ts/Main.ts',
     tests:  './ts/MainTests.ts',
     "unit-tests": './ts/UnitTests.ts'
-    //"elm-part": './elm/src/Main.elm'
   },
   module: {
     rules: [
@@ -38,7 +37,7 @@ module.exports = {
     path: path.resolve(__dirname, 'dist')
   },
   plugins: [
-    new CleanWebpackPlugin(['dist']),
+    //new CleanWebpackPlugin(['dist']),
     new BannerPlugin({
       chunks : {
         "elm-gen": {

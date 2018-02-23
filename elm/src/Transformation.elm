@@ -12,6 +12,7 @@ import List.Extra as List
 
 type alias TransformationContext =
     { decoderPrefix : String
+    , assumeUnionTypeDefaultConstructor : Bool
     , knownTypes : Dict.Dict String (List String)
     }
 
@@ -36,6 +37,7 @@ knownTypesForEncoders prefix =
 
 initContext isDecoders prefix userDefinedTypes =
     { decoderPrefix = prefix
+    , assumeUnionTypeDefaultConstructor = False
     , knownTypes =
         (if isDecoders then
             knownTypesForDecoders prefix
@@ -161,10 +163,31 @@ genDecoderForUnionType ctx unionType =
     in
         case unionType of
             TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
-                begin <| List <| List.map (genDecoderForUnionTypeConstructor ctx) constructors
+                begin <|
+                    List <|
+                        addDefaultConstructorDecoder ctx constructors <|
+                            List.map (genDecoderForUnionTypeConstructor ctx) constructors
 
             _ ->
                 Debug.crash "It is not a union type!"
+
+
+addDefaultConstructorDecoder ctx constructors generatedCode =
+    if not ctx.assumeUnionTypeDefaultConstructor then
+        generatedCode
+    else
+        List.head constructors
+            |> Maybe.andThen
+                (\h ->
+                    case h of
+                        TypeConstructor [ name ] [] ->
+                            Just (Application (variable ctx.decoderPrefix "succeed") (variable "" name))
+
+                        _ ->
+                            Nothing
+                )
+            |> Maybe.map (\h -> generatedCode ++ [ h ])
+            |> Maybe.withDefault generatedCode
 
 
 genEncoderForUnionTypeConstructor ctx cons =

@@ -5,6 +5,7 @@ import Dict
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
+import Config exposing (..)
 
 
 type GenCommand
@@ -46,6 +47,7 @@ type alias Model =
     , providedEncoders : Dict.Dict String String
     , generatedDecoders : List (List Statement)
     , generatedEncoders : List (List Statement)
+    , config : Config
     }
 
 
@@ -63,4 +65,27 @@ initModel =
     , providedEncoders = Dict.empty
     , generatedDecoders = []
     , generatedEncoders = []
+    , config = initConfig
     }
+
+
+type alias Config =
+    { genCommand : Maybe GenCommand
+    , encodersName : NameModification
+    , decodersName : NameModification
+    , outputFileName : NameModification
+    , unionTypeGeneratorFeatures : List UnionTypeGeneratorFeature
+    }
+
+
+initConfig =
+    { genCommand = Nothing
+    , encodersName = { prefix = "", suffix = "encoder", providedName = DontTouch }
+    , decodersName = { prefix = "", suffix = "decoder", providedName = DontTouch }
+    , outputFileName = { prefix = "", suffix = "DecodersAndEncoders", providedName = DontTouch }
+    , unionTypeGeneratorFeatures = []
+    }
+
+
+readConfig x =
+    initConfig
