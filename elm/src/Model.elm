@@ -85,7 +85,3 @@ initConfig =
     , outputFileName = { prefix = "", suffix = "DecodersAndEncoders", providedName = DontTouch }
     , unionTypeGeneratorFeatures = []
     }
-
-
-readConfig x =
-    initConfig

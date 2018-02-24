@@ -9,6 +9,7 @@ import Composer exposing (..)
 import StatementFilters exposing (..)
 import Model exposing (..)
 import Config exposing (..)
+import ReadConfig exposing (..)
 import Dict
 import Set
 
@@ -25,9 +26,10 @@ suite =
             "decodersName": {
                 "suffix": "decoder"
             },
-            "outputFileName" {
-                "providedName": {"replace": "Decoders"}
-            }
+            "outputFileName": {
+                "providedName": {"Replace": "Decoders"}
+            },
+            "unionTypeGeneratorFeatures": []
         }
     """
     in
@@ -35,10 +37,12 @@ suite =
             [ test "can decode example config" <|
                 \_ ->
                     Expect.equal (readConfig config1)
-                        { genCommand = Nothing
-                        , encodersName = { prefix = "encode", suffix = "", providedName = DontTouch }
-                        , decodersName = { prefix = "", suffix = "decoder", providedName = DontTouch }
-                        , outputFileName = { prefix = "", suffix = "", providedName = Replace "Decoders" }
-                        , unionTypeGeneratorFeatures = [ TrivialString ]
-                        }
+                        (Ok
+                            { genCommand = Nothing
+                            , encodersName = { prefix = "encode", suffix = "", providedName = DontTouch }
+                            , decodersName = { prefix = "", suffix = "decoder", providedName = DontTouch }
+                            , outputFileName = { prefix = "", suffix = "", providedName = Replace "Decoders" }
+                            , unionTypeGeneratorFeatures = [ TrivialString ]
+                            }
+                        )
             ]

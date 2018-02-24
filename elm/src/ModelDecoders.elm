@@ -3,14 +3,14 @@ module ModelDecoders exposing (..)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import Config exposing (NameModification, UnionTypeGeneratorFeature(..), ProvidedNameModification(..))
+import Config exposing (NameModification, ProvidedNameModification(..), UnionTypeGeneratorFeature(..))
 import Model exposing (Config, GenCommand(..), InputInfo)
 
 
 configDecoder : JD.Decoder Config
 configDecoder =
     JD.decode Config
-        |> JD.required "genCommand" (maybeDecoder genCommandDecoder)
+        |> JD.optional "genCommand" (maybeDecoder genCommandDecoder) Nothing
         |> JD.required "encodersName" nameModificationDecoder
         |> JD.required "decodersName" nameModificationDecoder
         |> JD.required "outputFileName" nameModificationDecoder
@@ -44,9 +44,9 @@ maybeDecoder decoder =
 nameModificationDecoder : JD.Decoder NameModification
 nameModificationDecoder =
     JD.decode NameModification
-        |> JD.required "prefix" JD.string
-        |> JD.required "suffix" JD.string
-        |> JD.required "providedName" providedNameModificationDecoder
+        |> JD.optional "prefix" JD.string ""
+        |> JD.optional "suffix" JD.string ""
+        |> JD.optional "providedName" providedNameModificationDecoder DontTouch
 
 
 providedNameModificationDecoder : JD.Decoder ProvidedNameModification
