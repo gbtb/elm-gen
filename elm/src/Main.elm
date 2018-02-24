@@ -25,6 +25,7 @@ import Set
 import Dict
 import Model exposing (..)
 import ModelDecoders exposing (..)
+import ReadConfig exposing (readConfig)
 
 
 type Msg
@@ -32,11 +33,20 @@ type Msg
     | ResolveDependencies
     | Generate
     | Print
+    | ReadConfig String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        ReadConfig str ->
+            case readConfig str of
+                Ok conf ->
+                    { model | config = conf } ! []
+
+                Err e ->
+                    model ! [ errorMessage <| "Can't decode provided config file. Elm error was:\n" ++ e ]
+
         Parse inputInfo ->
             let
                 parsedStatements =
@@ -48,7 +58,7 @@ update msg model =
                         inputInfo.fileNames
                         inputInfo.genCommand
                 else
-                    updateInitialParse model parsedStatements inputInfo.genCommand
+                    updateInitialParse model parsedStatements inputInfo.fileNames inputInfo.genCommand
 
         ResolveDependencies ->
             let
@@ -84,10 +94,10 @@ update msg model =
                 fileContent =
                     composeFile model
             in
-                ( model, Cmd.batch [ logMessage "Printing...", output fileContent ] )
+                ( model, Cmd.batch [ logMessage "Printing...", output ( model.outputFileName, fileContent ) ] )
 
 
-updateInitialParse model parsedStatements genCommand =
+updateInitialParse model parsedStatements fileNames genCommand =
     ( { model
         | parsedStatements =
             case parsedStatements of
@@ -97,6 +107,7 @@ updateInitialParse model parsedStatements genCommand =
                 Ok ( _, _, statements ) ->
                     statements |> applyMetaComments
         , genCommand = genCommand
+        , outputFileName = ReadConfig.makeOutputFileName model.config (List.head fileNames |> fromJust "Output file name was not provided!")
       }
     , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
     )
@@ -118,7 +129,10 @@ updateAdditionalParse model parsedStatements fileNames genCommand =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    input <| (\value -> JD.decodeValue inputInfoDecoder value |> fromOk |> Parse)
+    Sub.batch
+        [ input <| (\value -> JD.decodeValue inputInfoDecoder value |> fromOk |> Parse)
+        , config <| ReadConfig
+        ]
 
 
 {-| Main func as it is
@@ -132,7 +146,10 @@ main =
         }
 
 
-port output : String -> Cmd msg
+port config : (String -> msg) -> Sub msg
+
+
+port output : ( String, String ) -> Cmd msg
 
 
 port requestFiles : List (List String) -> Cmd msg

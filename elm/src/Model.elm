@@ -35,6 +35,7 @@ type alias TypeSet =
 
 type alias Model =
     { inputFileContent : String
+    , outputFileName : String
     , genCommand : GenCommand
     , parsedStatements : List Statement
     , newlyParsedStatements : List Statement
@@ -54,6 +55,7 @@ type alias Model =
 initModel =
     { inputFileContent = ""
     , genCommand = Decoders
+    , outputFileName = ""
     , parsedStatements = []
     , newlyParsedStatements = []
     , unknownTypes = Set.empty

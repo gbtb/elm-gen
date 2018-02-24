@@ -37,7 +37,7 @@ module.exports = {
     path: path.resolve(__dirname, 'dist')
   },
   plugins: [
-    //new CleanWebpackPlugin(['dist']),
+    new CleanWebpackPlugin(['dist']),
     new BannerPlugin({
       chunks : {
         "elm-gen": {

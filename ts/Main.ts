@@ -4,7 +4,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parseGenCommand, getOutputFileName } from './Utils';
 
-const usageStr = "usage: elm-gen [input_file] [output_file]";
+const usageStr = `usage: elm-gen [command] [input_file] [output_file] options
+Command can be: decoders | encoders | decoders,encoders and also shortcutted to d,e.
+For now single input_file and output_file only supported.
+Available options:
+    --config    [path]  path to config file. Defaults to elm-gen.json
+`;
 const args = parseArgs(process.argv);
 
 //first arg is node exec
@@ -24,9 +29,9 @@ if (!args._ ||  args._.length < 4){
     const Elm =  require("../elm/src/Main.elm");
     const app = Elm.Main.worker();
 
-    app.ports.output.subscribe((string: string) => {
-        console.log(`Writing output to file: ${outPath}`);
-        fs.writeFileSync(outPath, string);
+    app.ports.output.subscribe((out: Array<string>) => {
+        console.log(`Writing output to file: ${out[0]}`);
+        fs.writeFileSync(out[0], out[1]);
     });
 
     app.ports.logMessage.subscribe((msg: string) => {
@@ -38,10 +43,20 @@ if (!args._ ||  args._.length < 4){
         process.exit(1);
     });
 
+    let configPath = "./elm-gen.json";
+    if (args['config'])
+        configPath = args['config'];
+
+    if (fs.existsSync(configPath)){
+        console.log(`Reading config: ${configPath}`)
+        const configContents = fs.readFileSync(configPath, {encoding: 'utf-8'});
+        app.ports.config.send(configContents);
+    }
+
     const fileContents: string = fs.readFileSync(inputPath, {encoding: 'utf-8'});
     app.ports.input.send({
         fileContents: fileContents, 
-        fileNames: [inputPath],
+        fileNames: [outPath],
         genCommand: genCommand 
     });
 

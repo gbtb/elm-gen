@@ -33,8 +33,8 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     expect(ret.stderr).to.equal(
       "Error: Required arguments not provided!\n"
     );
-    expect(ret.stdout).to.equal(
-      "usage: elm-gen [input_file] [output_file]\n"
+    expect(ret.stdout).to.contain(
+      "usage: "
     );
   });  
 
@@ -177,6 +177,15 @@ describe('Elm-gen by default produces decoder and encoders', () => {
       readFile(outPath("TransitiveImportDecoders.elm"))
     ).to.equal(
       readFile(dataPath("TransitiveImportDecoders.elm"))
+    );
+  });
+
+  it('uses provided config' , () => {
+    shell.exec("./elm-gen d ../tests_data/Basic.elm . --config ../tests_data/elm-gen.json");
+    expect(
+      readFile(outPath("BasicDecodersWithConfig.elm"))
+    ).to.equal(
+      readFile(dataPath("BasicDecodersWithConfig.elm"))
     );
   });
 

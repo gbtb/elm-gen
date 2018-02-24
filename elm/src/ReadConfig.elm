@@ -21,3 +21,17 @@ readConfig str =
                     config
             )
             config
+
+
+makeOutputFileName : Config -> String -> String
+makeOutputFileName config name =
+    let
+        name_ =
+            case config.outputFileName.providedName of
+                DontTouch ->
+                    name
+
+                Replace str ->
+                    str
+    in
+        config.outputFileName.prefix ++ name_ ++ config.outputFileName.suffix
