@@ -65,36 +65,32 @@ resolveDependencies model =
         firstCall =
             List.length model.newlyParsedStatements == 0
 
+        statements =
+            if not firstCall then
+                model.newlyParsedStatements
+            else
+                model.parsedStatements
+
         types =
-            List.filter (extractType >> asFilter) <|
-                if not firstCall then
-                    model.newlyParsedStatements
-                else
-                    model.parsedStatements
+            List.filter (extractType >> asFilter) <| statements
 
         decoders =
             Dict.fromList <|
                 List.filterMap (extractDecoder decTcName) <|
-                    if not firstCall then
-                        model.newlyParsedStatements
-                    else
-                        model.parsedStatements
+                    statements
 
         encoders =
             Dict.fromList <|
                 List.filterMap (extractEncoder encTcName) <|
-                    if not firstCall then
-                        model.newlyParsedStatements
-                    else
-                        model.parsedStatements
+                    statements
 
         moduleName =
-            List.find (extractModuleDeclaration >> asFilter) model.parsedStatements
+            List.find (extractModuleDeclaration >> asFilter) statements
                 |> Maybe.andThen extractModuleDeclaration
                 |> fromJust "Module declaration not found!"
 
         importsDict =
-            Dict.fromList [ ( moduleName, Set.fromList <| getTypes model.genCommand decoders encoders unknownTypes model.parsedStatements ) ]
+            Dict.fromList [ ( moduleName, Set.fromList <| getTypes model.genCommand decoders encoders unknownTypes statements ) ]
 
         typesDict =
             Dict.union model.typesDict <|
@@ -126,10 +122,7 @@ resolveDependencies model =
             , providedDecoders = Dict.union decoders model.providedDecoders
             , providedEncoders = Dict.union encoders model.providedEncoders
             , importsDict =
-                if firstCall then
-                    Debug.log "1" importsDict
-                else
-                    model.importsDict
+                Dict.union importsDict model.importsDict
             , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
         }
 
@@ -144,7 +137,7 @@ generate model =
             model.dependencies
 
         userDefinedTypesDecoders =
-            Dict.values (Debug.log "g:" graph)
+            Dict.values graph
                 |> List.foldl Set.union Set.empty
                 |> setdiff (Set.fromList [ "List", "Array" ])
                 |> Set.toList
@@ -364,7 +357,7 @@ printImports importsDict typesDict =
         typesImports =
             List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
                 Dict.toList
-                    (Debug.log "imp:" importsDict)
+                    importsDict
     in
         List.map printStatement (defaultImports ++ typesImports)
 

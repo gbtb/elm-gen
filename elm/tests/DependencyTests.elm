@@ -87,7 +87,12 @@ suite =
                                 resolveDependencies initialModel
 
                             modelWithDeps =
-                                { firstPass | newlyParsedStatements = [ TypeDeclaration (TypeConstructor [ "A" ] []) ([ TypeConstructor [ "A" ] [] ]) ] }
+                                { firstPass
+                                    | newlyParsedStatements =
+                                        [ ModuleDeclaration [ "Second" ] AllExport
+                                        , TypeDeclaration (TypeConstructor [ "A" ] []) ([ TypeConstructor [ "A" ] [] ])
+                                        ]
+                                }
 
                             finalForm =
                                 resolveDependencies modelWithDeps
@@ -98,7 +103,7 @@ suite =
                                 , (\m -> Expect.equal (Dict.keys m.typesDict) [ "A", "B", "C" ])
                                 , (\m -> Expect.equal (Dict.keys <| Tuple.second m.dependencies) [ "A", "B", "C" ])
                                 , (\m -> Expect.equal (Tuple.first m.dependencies) (Set.fromList [ "C" ]))
-                                , (\m -> Expect.equal (List.length m.parsedStatements) 4)
+                                , (\m -> Expect.equal (List.length m.parsedStatements) 5)
                                   --concat new statements as well
                                 ]
                                 finalForm
