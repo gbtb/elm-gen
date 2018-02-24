@@ -171,4 +171,13 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('transitive import issue' , () => {
+    shell.exec("./elm-gen d ../tests_data/TransitiveImport.elm .");
+    expect(
+      readFile(outPath("TransitiveImportDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("TransitiveImportDecoders.elm"))
+    );
+  });
+
 })

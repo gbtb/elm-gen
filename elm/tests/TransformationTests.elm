@@ -113,4 +113,13 @@ suite =
                             TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "Trivial" ] [], TypeConstructor [ "Cons1" ] ([ TypeConstructor [ "Int" ] [] ]) ])
                         )
                         (Application (Variable [ "oneOf" ]) (List ([ Application (Application (Variable [ "field" ]) (String "Trivial")) (Application (Variable [ "succeed" ]) (Variable [ "Trivial" ])), Application (Application (Variable [ "field" ]) (String "Cons1")) (Application (Application (Variable [ "map" ]) (Variable [ "Cons1" ])) (Variable [ "int" ])), Application (Variable [ "succeed" ]) (Variable [ "Trivial" ]) ])))
+            , test "dont generate decoder with default constructor if its non-trivial" <|
+                \_ ->
+                    let
+                        typeDecl =
+                            TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "Trivial" ] ([ TypeConstructor [ "Float" ] [] ]), TypeConstructor [ "Cons1" ] ([ TypeConstructor [ "Int" ] [] ]) ])
+                    in
+                        Expect.equal
+                            (genDecoderForUnionType { context | assumeUnionTypeDefaultConstructor = True } <| typeDecl)
+                            (genDecoderForUnionType context typeDecl)
             ]

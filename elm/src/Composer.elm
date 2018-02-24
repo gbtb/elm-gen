@@ -127,7 +127,7 @@ resolveDependencies model =
             , providedEncoders = Dict.union encoders model.providedEncoders
             , importsDict =
                 if firstCall then
-                    importsDict
+                    Debug.log "1" importsDict
                 else
                     model.importsDict
             , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
@@ -144,7 +144,7 @@ generate model =
             model.dependencies
 
         userDefinedTypesDecoders =
-            Dict.values graph
+            Dict.values (Debug.log "g:" graph)
                 |> List.foldl Set.union Set.empty
                 |> setdiff (Set.fromList [ "List", "Array" ])
                 |> Set.toList
@@ -364,7 +364,7 @@ printImports importsDict typesDict =
         typesImports =
             List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
                 Dict.toList
-                    importsDict
+                    (Debug.log "imp:" importsDict)
     in
         List.map printStatement (defaultImports ++ typesImports)
 

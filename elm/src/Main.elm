@@ -67,7 +67,7 @@ update msg model =
                     in
                         case importsDict of
                             Ok dict ->
-                                ( { new_model | importsDict = Dict.union new_model.importsDict dict }
+                                ( { new_model | importsDict = Dict.union new_model.importsDict (Debug.log "2" dict) }
                                 , requestFiles <| Dict.keys dict
                                 )
 

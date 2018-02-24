@@ -3,7 +3,18 @@ module ModelDecoders exposing (..)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import Model exposing (GenCommand(..), InputInfo)
+import Config exposing (NameModification, UnionTypeGeneratorFeature(..), ProvidedNameModification(..))
+import Model exposing (Config, GenCommand(..), InputInfo)
+
+
+configDecoder : JD.Decoder Config
+configDecoder =
+    JD.decode Config
+        |> JD.required "genCommand" (maybeDecoder genCommandDecoder)
+        |> JD.required "encodersName" nameModificationDecoder
+        |> JD.required "decodersName" nameModificationDecoder
+        |> JD.required "outputFileName" nameModificationDecoder
+        |> JD.required "unionTypeGeneratorFeatures" (JD.list unionTypeGeneratorFeatureDecoder)
 
 
 genCommandDecoder : JD.Decoder GenCommand
@@ -21,3 +32,36 @@ inputInfoDecoder =
         |> JD.required "fileContents" JD.string
         |> JD.required "fileNames" (JD.list JD.string)
         |> JD.required "genCommand" genCommandDecoder
+
+
+maybeDecoder decoder =
+    JD.oneOf
+        [ JD.null Nothing
+        , JD.map Just decoder
+        ]
+
+
+nameModificationDecoder : JD.Decoder NameModification
+nameModificationDecoder =
+    JD.decode NameModification
+        |> JD.required "prefix" JD.string
+        |> JD.required "suffix" JD.string
+        |> JD.required "providedName" providedNameModificationDecoder
+
+
+providedNameModificationDecoder : JD.Decoder ProvidedNameModification
+providedNameModificationDecoder =
+    JD.oneOf
+        [ JD.field "DontTouch" (JD.succeed DontTouch)
+        , JD.field "Replace" (JD.map Replace JD.string)
+        , JD.succeed DontTouch
+        ]
+
+
+unionTypeGeneratorFeatureDecoder : JD.Decoder UnionTypeGeneratorFeature
+unionTypeGeneratorFeatureDecoder =
+    JD.oneOf
+        [ JD.field "TrivialString" (JD.succeed TrivialString)
+        , JD.field "TrivialObject" (JD.succeed TrivialObject)
+        , JD.field "DefaultConstructor" (JD.succeed DefaultConstructor)
+        ]

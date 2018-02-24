@@ -5,7 +5,7 @@ import Dict
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
-import Config exposing (..)
+import Config exposing (NameModification, UnionTypeGeneratorFeature(..), ProvidedNameModification(..))
 
 
 type GenCommand
