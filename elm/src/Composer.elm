@@ -14,6 +14,7 @@ import Dict
 import Utils exposing (..)
 import Model exposing (..)
 import StatementFilters exposing (..)
+import ReadConfig exposing (..)
 
 
 type alias GenContext =
@@ -195,10 +196,12 @@ composeFile model =
     let
         moduleName =
             extractModuleDeclaration model.moduleDeclaration
+                |> fromJust "Cannot extract input file module declaration!"
     in
         String.join "\n" <|
             List.map (produceString 4) <|
-                [ printStatement <| makeDecodersModuleDecl model.genCommand model.moduleDeclaration
+                [ printStatement <| ModuleDeclaration (getModuleNameFromOutputFileName moduleName model.outputFileName) AllExport
+                  --makeDecodersModuleDecl model.genCommand model.moduleDeclaration
                 , emptyLine
                 ]
                     ++ printImports model.importsDict model.typesDict

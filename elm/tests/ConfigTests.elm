@@ -45,4 +45,28 @@ suite =
                             , unionTypeGeneratorFeatures = [ TrivialString ]
                             }
                         )
+            , test
+                "make simple output file name"
+              <|
+                \_ ->
+                    Expect.equal (makeOutputFileName initConfig "../tests_data/Test.elm")
+                        "../tests_data/Test.elm"
+            , test "make simple output file name with prefix" <|
+                \_ ->
+                    Expect.equal
+                        (makeOutputFileName
+                            { initConfig
+                                | outputFileName = { prefix = "Pr", suffix = "", providedName = DontTouch }
+                            }
+                            "../tests_data/Test.elm"
+                        )
+                        "../tests_data/PrTest.elm"
+            , test "get output module name" <|
+                \_ ->
+                    Expect.equal (getModuleNameFromOutputFileName [ "Main", "Module" ] "Main/NewDecoders.elm")
+                        ([ "Main", "NewDecoders" ])
+            , test "get output module name 2" <|
+                \_ ->
+                    Expect.equal (getModuleNameFromOutputFileName [ "Module" ] "./NewDecoders.elm")
+                        ([ "NewDecoders" ])
             ]

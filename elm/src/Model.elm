@@ -84,6 +84,6 @@ initConfig =
     { genCommand = Nothing
     , encodersName = { prefix = "", suffix = "encoder", providedName = DontTouch }
     , decodersName = { prefix = "", suffix = "decoder", providedName = DontTouch }
-    , outputFileName = { prefix = "", suffix = "DecodersAndEncoders", providedName = DontTouch }
+    , outputFileName = { prefix = "", suffix = "", providedName = DontTouch }
     , unionTypeGeneratorFeatures = []
     }
