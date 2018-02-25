@@ -82,8 +82,8 @@ type alias Config =
 
 initConfig =
     { genCommand = Nothing
-    , encodersName = { prefix = "", suffix = "encoder", providedName = DontTouch }
-    , decodersName = { prefix = "", suffix = "decoder", providedName = DontTouch }
+    , encodersName = { prefix = "", suffix = "Encoder", providedName = DontTouch }
+    , decodersName = { prefix = "", suffix = "Decoder", providedName = DontTouch }
     , outputFileName = { prefix = "", suffix = "", providedName = DontTouch }
     , unionTypeGeneratorFeatures = []
     }

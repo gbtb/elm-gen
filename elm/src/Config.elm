@@ -13,6 +13,13 @@ type alias NameModification =
     }
 
 
+initNameMod =
+    { prefix = ""
+    , suffix = ""
+    , providedName = DontTouch
+    }
+
+
 type UnionTypeGeneratorFeature
     = TrivialString
     | TrivialObject

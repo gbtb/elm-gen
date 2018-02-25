@@ -57,10 +57,10 @@ keysSet d =
     Set.fromList <| Dict.keys d
 
 
-getDecoderName typeName suffix =
+getDecoderName typeName makeName =
     case String.uncons typeName of
         Just ( h, tail ) ->
-            String.cons (Char.toLower h) (tail ++ suffix)
+            makeName <| String.cons (Char.toLower h) (tail)
 
         Nothing ->
             ""

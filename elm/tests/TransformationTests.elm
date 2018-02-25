@@ -8,16 +8,17 @@ import Ast.Expression exposing (..)
 import Transformation exposing (..)
 import Set
 import Dict
+import ReadConfig exposing (..)
 
 
 suite : Test
 suite =
     let
         context =
-            initContext True "" Dict.empty
+            initContext True "" defaultDecoderNameFunc Dict.empty
 
         encContext =
-            initContext False "" Dict.empty
+            initContext False "" defaultEncoderNameFunc Dict.empty
     in
         describe "Ast transformation"
             [ describe "Multiple fields"

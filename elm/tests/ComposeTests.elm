@@ -15,17 +15,7 @@ import Set
 suite : Test
 suite =
     describe "Composer:"
-        [ test "can make correct module declaration for decoder" <|
-            \_ ->
-                Expect.equal
-                    (makeDecodersModuleDecl Decoders <| ModuleDeclaration [ "Basic" ] AllExport)
-                    (ModuleDeclaration [ "BasicDecoders" ] AllExport)
-        , test "can make correct module declaration for decodersandencoders" <|
-            \_ ->
-                Expect.equal
-                    (makeDecodersModuleDecl DecodersAndEncoders <| ModuleDeclaration [ "Basic" ] AllExport)
-                    (ModuleDeclaration [ "BasicDecodersAndEncoders" ] AllExport)
-        , test "can store types in a dict" <|
+        [ test "can store types in a dict" <|
             \_ ->
                 Expect.equal
                     (makeTypesDict

@@ -13,6 +13,7 @@ import Set
 import Dict
 import Utils exposing (..)
 import Model exposing (..)
+import Config exposing (..)
 import StatementFilters exposing (..)
 import ReadConfig exposing (..)
 
@@ -24,6 +25,7 @@ type alias GenContext =
     , excludedTypes : TypeSet
     , generatorFunc : TransformationContext -> Statement -> List Statement
     , prefix : String
+    , makeName : String -> String
     , isDecoders : Bool
     , maybeStub : Statement
     , mappableStubs : Dict.Dict String (List Statement)
@@ -142,50 +144,60 @@ generate model =
                 |> List.foldl Set.union Set.empty
                 |> setdiff (Set.fromList [ "List", "Array" ])
                 |> Set.toList
-                |> makeNameMapping "Decoder"
+                |> makeNameMapping (getNameFunc model.config.decodersName)
                 |> Dict.union (Dict.map (\_ v -> [ v ]) model.providedDecoders)
 
         userDefinedTypesEncoders =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
                 |> Set.toList
-                |> makeNameMapping "Encoder"
+                |> makeNameMapping (getNameFunc model.config.encodersName)
                 |> Dict.union (Dict.map (\_ v -> [ v ]) model.providedEncoders)
     in
         { model
             | moduleDeclaration = moduleDeclaration
             , generatedDecoders =
                 if (model.genCommand == Decoders) || (model.genCommand == DecodersAndEncoders) then
-                    generateDecoders
-                        (GenContext model.typesDict
-                            graph
-                            (userDefinedTypesDecoders)
-                            (keysSet model.providedDecoders)
-                            genDecoder
-                            "JD"
-                            True
-                            genMaybeDecoder
-                            Dict.empty
-                        )
-                        graphHeads
+                    let
+                        nameFunc =
+                            (getNameFunc model.config.decodersName)
+                    in
+                        generateDecoders
+                            (GenContext model.typesDict
+                                graph
+                                (userDefinedTypesDecoders)
+                                (keysSet model.providedDecoders)
+                                genDecoder
+                                "JD"
+                                nameFunc
+                                True
+                                (genMaybeDecoder nameFunc)
+                                Dict.empty
+                            )
+                            graphHeads
                 else
                     []
             , generatedEncoders =
                 if (model.genCommand == Encoders) || (model.genCommand == DecodersAndEncoders) then
-                    generateDecoders
-                        (GenContext model.typesDict
-                            graph
-                            userDefinedTypesEncoders
-                            (keysSet model.providedEncoders)
-                            genEncoder
-                            "JE"
-                            False
-                            genMaybeEncoder
-                            (mappableStubs
-                                { decoderPrefix = "JE" }
+                    let
+                        nameFunc =
+                            (getNameFunc model.config.encodersName)
+                    in
+                        generateDecoders
+                            (GenContext model.typesDict
+                                graph
+                                userDefinedTypesEncoders
+                                (keysSet model.providedEncoders)
+                                genEncoder
+                                "JE"
+                                nameFunc
+                                False
+                                (genMaybeEncoder nameFunc)
+                                (mappableStubs
+                                    { decoderPrefix = "JE" }
+                                )
                             )
-                        )
-                        graphHeads
+                            graphHeads
                 else
                     []
         }
@@ -201,7 +213,6 @@ composeFile model =
         String.join "\n" <|
             List.map (produceString 4) <|
                 [ printStatement <| ModuleDeclaration (getModuleNameFromOutputFileName moduleName model.outputFileName) AllExport
-                  --makeDecodersModuleDecl model.genCommand model.moduleDeclaration
                 , emptyLine
                 ]
                     ++ printImports model.importsDict model.typesDict
@@ -256,8 +267,8 @@ makeTypesDict types =
     List.foldl (\item accumDict -> Dict.insert (getTypeNameFromStatement item) item accumDict) Dict.empty types
 
 
-makeNameMapping suffix types =
-    List.map (\type_ -> ( type_, [ getDecoderName type_ suffix ] )) types |> Dict.fromList
+makeNameMapping nameFunc types =
+    List.map (\type_ -> ( type_, [ getDecoderName type_ nameFunc ] )) types |> Dict.fromList
 
 
 generateDecoders genContext graphHeads =
@@ -293,6 +304,7 @@ generateDecodersHelper genContext item =
                                     (Transformation.initContext
                                         genContext.isDecoders
                                         genContext.prefix
+                                        genContext.makeName
                                         genContext.userDefinedTypes
                                     )
                                     stmt
@@ -374,26 +386,6 @@ getExportSet typesDict name =
             Just AllExport
         else
             Nothing
-
-
-makeDecodersModuleDecl genCommand stmt =
-    let
-        moduleName =
-            case stmt of
-                ModuleDeclaration m _ ->
-                    m
-
-                PortModuleDeclaration m _ ->
-                    m
-
-                _ ->
-                    Debug.crash "Incorrect statement kind was passed!"
-
-        newModuleName =
-            List.updateAt (List.length moduleName - 1) (\x -> x ++ (toString genCommand)) moduleName
-                |> fromJust "Impossibru!"
-    in
-        ModuleDeclaration newModuleName AllExport
 
 
 emptyLine =

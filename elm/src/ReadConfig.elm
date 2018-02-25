@@ -80,3 +80,25 @@ getModuleNameFromOutputFileName moduleDeclaration outFile =
                             Regex.All
                             (Regex.regex <| "(\\w*).elm$")
                             outFile
+
+
+getNameFunc : NameModification -> String -> String
+getNameFunc nameMod name =
+    let
+        name_ =
+            case nameMod.providedName of
+                DontTouch ->
+                    name
+
+                Replace str ->
+                    str
+    in
+        nameMod.prefix ++ name_ ++ nameMod.suffix
+
+
+defaultDecoderNameFunc =
+    getNameFunc { initNameMod | suffix = "Decoder" }
+
+
+defaultEncoderNameFunc =
+    getNameFunc { initNameMod | suffix = "Encoder" }

@@ -8,17 +8,19 @@ import Dict
 import Char
 import Utils exposing (..)
 import List.Extra as List
+import ReadConfig exposing (..)
 
 
 type alias TransformationContext =
     { decoderPrefix : String
     , assumeUnionTypeDefaultConstructor : Bool
     , knownTypes : Dict.Dict String (List String)
+    , makeName : String -> String
     }
 
 
 defaultContext isDecoders =
-    initContext isDecoders "JD" Dict.empty
+    initContext isDecoders "JD" defaultDecoderNameFunc Dict.empty
 
 
 knownTypesForDecoders prefix =
@@ -27,24 +29,25 @@ knownTypesForDecoders prefix =
         |> Dict.fromList
 
 
-knownTypesForEncoders prefix =
+knownTypesForEncoders prefix nameFunc =
     ([ "Int", "Float", "String", "Char", "Bool" ]
         |> List.map (\type_ -> ( type_, qualifiedName prefix (String.toLower type_) ))
     )
-        ++ ([ "List", "Array" ] |> List.map (\type_ -> ( type_, qualifiedName "" (getDecoderName type_ "Encoder") )))
+        ++ ([ "List", "Array" ] |> List.map (\type_ -> ( type_, qualifiedName "" (getDecoderName type_ nameFunc) )))
         |> Dict.fromList
 
 
-initContext isDecoders prefix userDefinedTypes =
+initContext isDecoders prefix nameFunc userDefinedTypes =
     { decoderPrefix = prefix
     , assumeUnionTypeDefaultConstructor = False
     , knownTypes =
         (if isDecoders then
             knownTypesForDecoders prefix
          else
-            knownTypesForEncoders prefix
+            knownTypesForEncoders prefix nameFunc
         )
             |> Dict.union userDefinedTypes
+    , makeName = nameFunc
     }
 
 
@@ -57,7 +60,7 @@ genDecoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName "Decoder"
+                    getDecoderName typeName context.makeName
 
                 decoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -75,7 +78,7 @@ genDecoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName "Decoder"
+                    getDecoderName typeName context.makeName
 
                 decoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -100,7 +103,7 @@ genEncoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName "Encoder"
+                    getDecoderName typeName context.makeName
 
                 encoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -118,7 +121,7 @@ genEncoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName "Encoder"
+                    getDecoderName typeName context.makeName
 
                 encoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -384,8 +387,8 @@ decodeType ctx type_ =
             Debug.crash "Not allowed type in recordField"
 
 
-genMaybeDecoder =
-    FunctionDeclaration "maybeDecoder"
+genMaybeDecoder nameFunc =
+    FunctionDeclaration (nameFunc "maybe")
         ([ Variable [ "decoder" ] ])
         (Application
             (Access (Variable [ "JD" ]) [ "oneOf" ])
@@ -398,8 +401,8 @@ genMaybeDecoder =
         )
 
 
-genMaybeEncoder =
-    FunctionDeclaration "maybeEncoder"
+genMaybeEncoder nameFunc =
+    FunctionDeclaration (nameFunc "maybe")
         ([ Variable [ "valueEncoder" ], Variable [ "value" ] ])
         (Case (Variable [ "value" ])
             ([ ( Application (Variable [ "Just" ]) (Variable [ "value" ])
