@@ -2,8 +2,9 @@ module ParserExtensions exposing (..)
 
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
-import StatementFilters exposing (extractMetaComment, extractType, asFilter)
+import StatementFilters exposing (extractMetaComment, extractType, asFilter, extractRecordTypeDefault, extractUnionTypeDefault)
 import Model exposing (MetaComment(..))
+import Maybe.Extra as Maybe
 import Dict
 
 
@@ -65,3 +66,18 @@ foldHelper item accum =
                     f2
         else
             f2
+
+
+defaultValueHelper accum item =
+    { accum
+        | typeName =
+            accum.metaComment
+                |> Maybe.andThen
+                    (\com ->
+                        if com == DefaultValue then
+                            extractUnionTypeDefault item
+                                |> Maybe.orElse (extractRecordTypeDefault item)
+                        else
+                            Nothing
+                    )
+    }

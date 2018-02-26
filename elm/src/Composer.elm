@@ -314,6 +314,8 @@ generateDecodersHelper genContext item =
                                         genContext.prefix
                                         genContext.makeName
                                         genContext.userDefinedTypes
+                                        genContext.defaultRecordValues
+                                        genContext.defaultUnionValues
                                     )
                                     stmt
 

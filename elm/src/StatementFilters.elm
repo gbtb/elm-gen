@@ -118,3 +118,31 @@ extractMetaComment s =
 
         _ ->
             Nothing
+
+
+extractUnionTypeDefault s =
+    case s of
+        FunctionTypeDeclaration _ (TypeConstructor name []) ->
+            Just <| String.join "." name
+
+        _ ->
+            Nothing
+
+
+extractRecordTypeDefault s =
+    case s of
+        FunctionTypeDeclaration _ (TypeApplication (TypeConstructor name1 []) (TypeConstructor name2 [])) ->
+            let
+                name1_ =
+                    String.join "." name1
+
+                name2_ =
+                    String.join "." name2
+            in
+                if name1_ == name2_ then
+                    Just name1_
+                else
+                    Nothing
+
+        _ ->
+            Nothing

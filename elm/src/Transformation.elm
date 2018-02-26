@@ -16,6 +16,8 @@ type alias TransformationContext =
     , assumeUnionTypeDefaultConstructor : Bool
     , knownTypes : Dict.Dict String (List String)
     , makeName : String -> String
+    , defaultRecordValues : Dict.Dict ( String, String ) Expression
+    , defaultUnionValues : Dict.Dict String Expression
     }
 
 
@@ -37,7 +39,7 @@ knownTypesForEncoders prefix nameFunc =
         |> Dict.fromList
 
 
-initContext isDecoders prefix nameFunc userDefinedTypes =
+initContext isDecoders prefix nameFunc userDefinedTypes d1 d2 =
     { decoderPrefix = prefix
     , assumeUnionTypeDefaultConstructor = False
     , knownTypes =
@@ -48,6 +50,8 @@ initContext isDecoders prefix nameFunc userDefinedTypes =
         )
             |> Dict.union userDefinedTypes
     , makeName = nameFunc
+    , defaultRecordValues = d1
+    , defaultUnionValues = d2
     }
 
 
