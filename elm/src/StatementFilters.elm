@@ -1,6 +1,8 @@
 module StatementFilters exposing (..)
 
 import Ast.Statement exposing (..)
+import Regex
+import Model exposing (MetaComment(..))
 
 
 asFilter : Maybe a -> Bool
@@ -106,8 +108,13 @@ eeHelper tcName s =
 
 extractMetaComment s =
     case s of
-        Comment " #Ignore" ->
-            Just " #Ignore"
+        Comment str ->
+            if Regex.contains (Regex.regex "//Ignore") str then
+                Just Ignore
+            else if Regex.contains (Regex.regex "//DefaultValue") str then
+                Just DefaultValue
+            else
+                Nothing
 
         _ ->
             Nothing

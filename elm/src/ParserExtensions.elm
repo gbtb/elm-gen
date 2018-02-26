@@ -2,19 +2,20 @@ module ParserExtensions exposing (..)
 
 import Ast.Statement exposing (..)
 import StatementFilters exposing (extractMetaComment, extractType, asFilter)
+import Model exposing (MetaComment(..))
 
 
 applyMetaComments : List Statement -> List Statement
 applyMetaComments stmnts =
     let
         foldResult =
-            List.foldl foldHelper (FoldHelper False []) stmnts
+            List.foldl foldHelper (FoldHelper Nothing []) stmnts
     in
         List.reverse foldResult.statements
 
 
 type alias FoldHelper =
-    { hadMetaComment : Bool
+    { metaComment : Maybe MetaComment
     , statements : List Statement
     }
 
@@ -23,17 +24,22 @@ foldHelper : Statement -> FoldHelper -> FoldHelper
 foldHelper item accum =
     let
         f1 =
-            { accum | hadMetaComment = False }
+            { accum | metaComment = Nothing }
 
         f2 =
-            { accum | hadMetaComment = False, statements = item :: accum.statements }
+            { accum | metaComment = Nothing, statements = item :: accum.statements }
+
+        metaComment =
+            extractMetaComment item
     in
-        if asFilter <| extractMetaComment item then
-            { accum | hadMetaComment = True }
+        if asFilter <| metaComment then
+            { accum | metaComment = metaComment }
         else if asFilter <| extractType item then
-            if accum.hadMetaComment then
-                f1
-            else
-                f2
+            case accum.metaComment of
+                Just Ignore ->
+                    f1
+
+                _ ->
+                    f2
         else
             f2

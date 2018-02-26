@@ -94,7 +94,7 @@ update msg model =
                 fileContent =
                     composeFile model
             in
-                ( model, Cmd.batch [ logMessage "Printing...", output ( Debug.log "fn" model.outputFileName, fileContent ) ] )
+                ( model, Cmd.batch [ logMessage "Printing...", output ( model.outputFileName, fileContent ) ] )
 
 
 updateInitialParse model parsedStatements fileNames genCommand =

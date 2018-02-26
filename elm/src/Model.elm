@@ -21,6 +21,11 @@ type alias InputInfo =
     }
 
 
+type MetaComment
+    = Ignore
+    | DefaultValue
+
+
 
 -- #Ignore
 

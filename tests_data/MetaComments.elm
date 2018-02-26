@@ -1,6 +1,6 @@
 module MetaComments exposing (..)
 
--- #Ignore
+-- //Ignore
 
 
 type A
@@ -9,10 +9,8 @@ type A
     | C String
 
 
-
--- #Ignore
-
-
+{-| //Ignore
+-}
 type alias R =
     { a : Int
     , b : List Char
