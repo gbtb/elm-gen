@@ -98,33 +98,49 @@ update msg model =
 
 
 updateInitialParse model parsedStatements fileNames genCommand =
-    ( { model
-        | parsedStatements =
+    let
+        metaParseResult =
+            applyMetaComments parsedStatements_
+
+        parsedStatements_ =
             case parsedStatements of
                 Err _ ->
                     Debug.crash "Failed to parse module!"
 
                 Ok ( _, _, statements ) ->
-                    statements |> applyMetaComments
-        , genCommand = genCommand
-        , outputFileName = ReadConfig.makeOutputFileName model.config (List.head fileNames |> fromJust "Output file name was not provided!")
-      }
-    , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
-    )
+                    statements
+    in
+        ( { model
+            | parsedStatements = metaParseResult.statements
+            , genCommand = genCommand
+            , outputFileName = ReadConfig.makeOutputFileName model.config (List.head fileNames |> fromJust "Output file name was not provided!")
+            , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
+            , defaultUnionValues = Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+          }
+        , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
+        )
 
 
 updateAdditionalParse model parsedStatements fileNames genCommand =
-    ( { model
-        | newlyParsedStatements =
+    let
+        metaParseResult =
+            applyMetaComments parsedStatements_
+
+        parsedStatements_ =
             case parsedStatements of
                 Err _ ->
                     Debug.crash "Failed to parse module!"
 
                 Ok ( _, _, statements ) ->
-                    statements |> applyMetaComments
-      }
-    , Cmd.batch [ logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
-    )
+                    statements
+    in
+        ( { model
+            | newlyParsedStatements = metaParseResult.statements
+            , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
+            , defaultUnionValues = Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+          }
+        , Cmd.batch [ logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
+        )
 
 
 subscriptions : Model -> Sub Msg

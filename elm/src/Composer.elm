@@ -3,6 +3,7 @@ module Composer exposing (..)
 import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
+import Ast.Expression exposing (..)
 import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder, genMaybeEncoder, TransformationContext, genEncoder, genEncoderForMappable)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
@@ -23,6 +24,8 @@ type alias GenContext =
     , graph : Dict.Dict String TypeSet
     , userDefinedTypes : Dict.Dict String (List String)
     , excludedTypes : TypeSet
+    , defaultRecordValues : Dict.Dict ( String, String ) Expression
+    , defaultUnionValues : Dict.Dict String Expression
     , generatorFunc : TransformationContext -> Statement -> List Statement
     , prefix : String
     , makeName : String -> String
@@ -163,17 +166,19 @@ generate model =
                             (getNameFunc model.config.decodersName)
                     in
                         generateDecoders
-                            (GenContext model.typesDict
-                                graph
-                                (userDefinedTypesDecoders)
-                                (keysSet model.providedDecoders)
-                                genDecoder
-                                "JD"
-                                nameFunc
-                                True
-                                (genMaybeDecoder nameFunc)
-                                Dict.empty
-                            )
+                            { typesDict = model.typesDict
+                            , graph = graph
+                            , userDefinedTypes = (userDefinedTypesDecoders)
+                            , excludedTypes = (keysSet model.providedDecoders)
+                            , defaultRecordValues = model.defaultRecordValues
+                            , defaultUnionValues = model.defaultUnionValues
+                            , generatorFunc = genDecoder
+                            , prefix = "JD"
+                            , makeName = nameFunc
+                            , isDecoders = True
+                            , maybeStub = (genMaybeDecoder nameFunc)
+                            , mappableStubs = Dict.empty
+                            }
                             graphHeads
                 else
                     []
@@ -184,19 +189,22 @@ generate model =
                             (getNameFunc model.config.encodersName)
                     in
                         generateDecoders
-                            (GenContext model.typesDict
-                                graph
-                                userDefinedTypesEncoders
-                                (keysSet model.providedEncoders)
-                                genEncoder
-                                "JE"
-                                nameFunc
-                                False
-                                (genMaybeEncoder nameFunc)
+                            { typesDict = model.typesDict
+                            , graph = graph
+                            , userDefinedTypes = (userDefinedTypesEncoders)
+                            , excludedTypes = (keysSet model.providedEncoders)
+                            , defaultRecordValues = model.defaultRecordValues
+                            , defaultUnionValues = model.defaultUnionValues
+                            , generatorFunc = genEncoder
+                            , prefix = "JE"
+                            , makeName = nameFunc
+                            , isDecoders = False
+                            , maybeStub = (genMaybeEncoder nameFunc)
+                            , mappableStubs =
                                 (mappableStubs
                                     { decoderPrefix = "JE" }
                                 )
-                            )
+                            }
                             graphHeads
                 else
                     []

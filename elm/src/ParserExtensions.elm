@@ -1,22 +1,44 @@
 module ParserExtensions exposing (..)
 
 import Ast.Statement exposing (..)
+import Ast.Expression exposing (..)
 import StatementFilters exposing (extractMetaComment, extractType, asFilter)
 import Model exposing (MetaComment(..))
+import Dict
 
 
-applyMetaComments : List Statement -> List Statement
+applyMetaComments :
+    List Statement
+    -> { statements : List Statement
+       , defaultRecordValues : Dict.Dict ( String, String ) Expression
+       , defaultUnionValues : Dict.Dict String Expression
+       }
 applyMetaComments stmnts =
     let
         foldResult =
-            List.foldl foldHelper (FoldHelper Nothing []) stmnts
+            List.foldl foldHelper initFoldHelper stmnts
     in
-        List.reverse foldResult.statements
+        { statements = List.reverse foldResult.statements
+        , defaultRecordValues = foldResult.defaultRecordValues
+        , defaultUnionValues = foldResult.defaultUnionValues
+        }
 
 
 type alias FoldHelper =
     { metaComment : Maybe MetaComment
+    , typeName : Maybe String
+    , defaultRecordValues : Dict.Dict ( String, String ) Expression
+    , defaultUnionValues : Dict.Dict String Expression
     , statements : List Statement
+    }
+
+
+initFoldHelper =
+    { metaComment = Nothing
+    , typeName = Nothing
+    , defaultRecordValues = Dict.empty
+    , defaultUnionValues = Dict.empty
+    , statements = []
     }
 
 

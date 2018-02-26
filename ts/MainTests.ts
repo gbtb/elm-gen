@@ -189,4 +189,13 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('uses provided default values for decoders' , () => {
+    shell.exec("./elm-gen d ../tests_data/WithDefaultValues.elm .");
+    expect(
+      readFile(outPath("WithDefaultValuesDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("WithDefaultValuesDecoders.elm"))
+    );
+  });
+
 })
