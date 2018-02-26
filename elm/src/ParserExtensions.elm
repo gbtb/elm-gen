@@ -50,22 +50,43 @@ foldHelper item accum =
             { accum | metaComment = Nothing }
 
         f2 =
-            { accum | metaComment = Nothing, statements = item :: accum.statements }
+            { f1 | statements = item :: accum.statements }
+
+        f3 =
+            { f2 | typeName = Nothing }
 
         metaComment =
             extractMetaComment item
     in
         if asFilter <| metaComment then
             { accum | metaComment = metaComment }
-        else if asFilter <| extractType item then
-            case accum.metaComment of
-                Just Ignore ->
-                    f1
-
-                _ ->
-                    f2
         else
-            f2
+            case accum.metaComment of
+                Just meta ->
+                    if asFilter <| extractType item && meta == Ignore then
+                        f1
+                    else if meta == DefaultValue then
+                        case accum.typeName of
+                            Nothing ->
+                                case extractUnionTypeDefault item |> Maybe.orElse (extractRecordTypeDefault item) of
+                                    Just typeName ->
+                                        { accum | typeName = Just typeName }
+
+                                    Nothing ->
+                                        f3
+
+                            Just typeName ->
+                                case extractDefaultValues accum item of
+                                    Just newAcc ->
+                                        newAcc
+
+                                    Nothing ->
+                                        f3
+                    else
+                        f3
+
+                Nothing ->
+                    f2
 
 
 defaultValueHelper accum item =
