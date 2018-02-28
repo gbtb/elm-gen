@@ -2,7 +2,7 @@ module ParserExtensions exposing (..)
 
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
-import StatementFilters exposing (extractMetaComment, extractType, asFilter, extractRecordTypeDefault, extractUnionTypeDefault)
+import StatementFilters exposing (extractMetaComment, extractType, asFilter, extractRecordTypeDefault, extractUnionTypeDefault, extractRecord)
 import Model exposing (MetaComment(..))
 import Maybe.Extra as Maybe
 import Dict
@@ -63,7 +63,7 @@ foldHelper item accum =
         else
             case accum.metaComment of
                 Just meta ->
-                    if asFilter <| extractType item && meta == Ignore then
+                    if (asFilter <| extractType item) && meta == Ignore then
                         f1
                     else if meta == DefaultValue then
                         case accum.typeName of
@@ -102,3 +102,48 @@ defaultValueHelper accum item =
                             Nothing
                     )
     }
+
+
+extractDefaultValues : { b | defaultRecordValues : Dict.Dict ( comparable, String ) Expression, defaultUnionValues : Dict.Dict comparable Expression, typeName : Maybe comparable } -> Statement -> Maybe { b | defaultRecordValues : Dict.Dict ( comparable, String ) Expression, defaultUnionValues : Dict.Dict comparable Expression, typeName : Maybe a }
+extractDefaultValues accum item =
+    Maybe.andThen
+        (\typeName ->
+            case item of
+                FunctionDeclaration _ [] funcBody ->
+                    extractRecord funcBody
+                        |> Maybe.andThen (Just << extractRecordHelper accum typeName)
+                        |> Maybe.orElse
+                            (Just
+                                ({ accum
+                                    | defaultUnionValues = Dict.insert typeName funcBody accum.defaultUnionValues
+                                    , typeName = Nothing
+                                 }
+                                )
+                            )
+
+                FunctionDeclaration _ [ _ ] funcBody ->
+                    case funcBody of
+                        RecordUpdate _ fieldList ->
+                            Just <| extractRecordHelper accum typeName fieldList
+
+                        _ ->
+                            Nothing
+
+                _ ->
+                    Nothing
+        )
+        accum.typeName
+
+
+extractRecordHelper accum typeName fieldList =
+    let
+        resetTypeName a =
+            { a | typeName = Nothing }
+    in
+        resetTypeName <|
+            List.foldl
+                (\item accum ->
+                    { accum | defaultRecordValues = Dict.insert ( typeName, (Tuple.first item) ) (Tuple.second item) accum.defaultRecordValues }
+                )
+                accum
+                fieldList

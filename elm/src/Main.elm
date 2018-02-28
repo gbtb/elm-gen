@@ -100,7 +100,7 @@ update msg model =
 updateInitialParse model parsedStatements fileNames genCommand =
     let
         metaParseResult =
-            applyMetaComments parsedStatements_
+            Debug.log "meta" <| applyMetaComments parsedStatements_
 
         parsedStatements_ =
             case parsedStatements of

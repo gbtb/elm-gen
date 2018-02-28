@@ -1,6 +1,7 @@
 module StatementFilters exposing (..)
 
 import Ast.Statement exposing (..)
+import Ast.Expression exposing (..)
 import Regex
 import Model exposing (MetaComment(..))
 
@@ -143,6 +144,18 @@ extractRecordTypeDefault s =
                     Just name1_
                 else
                     Nothing
+
+        _ ->
+            Nothing
+
+
+extractRecord s =
+    case s of
+        Record fieldList ->
+            Just fieldList
+
+        RecordUpdate _ fieldList ->
+            Just fieldList
 
         _ ->
             Nothing

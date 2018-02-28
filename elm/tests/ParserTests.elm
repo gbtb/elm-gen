@@ -41,4 +41,50 @@ suite =
             \_ ->
                 Expect.equal (extractUnionTypeDefault <| FunctionTypeDeclaration "defaultA" (TypeConstructor [ "A", "B" ] []))
                     (Just "A.B")
+        , test "extracts default record type value" <|
+            \_ ->
+                Expect.equal (extractRecordTypeDefault <| FunctionTypeDeclaration "initR" (TypeApplication (TypeConstructor [ "R" ] []) (TypeConstructor [ "R" ] [])))
+                    (Just "R")
+        , test "extracts default value for union type" <|
+            \_ ->
+                Expect.equal
+                    (extractDefaultValues { initFoldHelper | typeName = Just "A" } <|
+                        FunctionDeclaration "defaultA" [] (Application (Variable [ "B" ]) (Integer 3))
+                    )
+                    (Just <|
+                        { initFoldHelper
+                            | defaultUnionValues = Dict.fromList [ ( "A", (Application (Variable [ "B" ]) (Integer 3)) ) ]
+                        }
+                    )
+        , test "extracts default value from record type update func" <|
+            \_ ->
+                Expect.equal
+                    (extractDefaultValues { initFoldHelper | typeName = Just "R" } <|
+                        FunctionDeclaration "initR" ([ Variable [ "r" ] ]) (RecordUpdate "r" ([ ( "a", Integer 1 ), ( "b", List ([ Integer 1, Integer 2 ]) ), ( "c", String "123" ) ]))
+                    )
+                    (Just <|
+                        { initFoldHelper
+                            | defaultRecordValues =
+                                Dict.fromList
+                                    [ ( ( "R", "a" ), Integer 1 )
+                                    , ( ( "R", "b" ), List ([ Integer 1, Integer 2 ]) )
+                                    , ( ( "R", "c" ), String "123" )
+                                    ]
+                        }
+                    )
+        , test "extracts default value from record type init func" <|
+            \_ ->
+                Expect.equal
+                    (extractDefaultValues { initFoldHelper | typeName = Just "R" } <|
+                        FunctionDeclaration "initR" [] (Record ([ ( "a", Integer 1 ), ( "b", List ([ Integer 1, Integer 2 ]) ) ]))
+                    )
+                    (Just <|
+                        { initFoldHelper
+                            | defaultRecordValues =
+                                Dict.fromList
+                                    [ ( ( "R", "a" ), Integer 1 )
+                                    , ( ( "R", "b" ), List ([ Integer 1, Integer 2 ]) )
+                                    ]
+                        }
+                    )
         ]
