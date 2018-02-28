@@ -1,0 +1,12 @@
+{
+    "encodersName": {
+        "prefix": "encode"
+    },
+    "decodersName": {
+        "suffix": "decoder"
+    },
+    "outputFileName": {
+        "suffix": "WithConfig"
+    },
+    "unionTypeGeneratorFeatures": []
+}
