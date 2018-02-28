@@ -172,29 +172,34 @@ genDecoderForUnionType ctx unionType =
             TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
                 begin <|
                     List <|
-                        addDefaultConstructorDecoder ctx constructors <|
+                        addDefaultConstructorDecoder ctx typeName constructors <|
                             List.map (genDecoderForUnionTypeConstructor ctx) constructors
 
             _ ->
                 Debug.crash "It is not a union type!"
 
 
-addDefaultConstructorDecoder ctx constructors generatedCode =
-    if not ctx.assumeUnionTypeDefaultConstructor then
-        generatedCode
-    else
-        List.head constructors
-            |> Maybe.andThen
-                (\h ->
-                    case h of
-                        TypeConstructor [ name ] [] ->
-                            Just (Application (variable ctx.decoderPrefix "succeed") (variable "" name))
+addDefaultConstructorDecoder ctx typeName constructors generatedCode =
+    case Dict.get typeName ctx.defaultUnionValues of
+        Just defaultValue ->
+            generatedCode ++ [ Application (variable ctx.decoderPrefix "succeed") defaultValue ]
 
-                        _ ->
-                            Nothing
-                )
-            |> Maybe.map (\h -> generatedCode ++ [ h ])
-            |> Maybe.withDefault generatedCode
+        Nothing ->
+            if not ctx.assumeUnionTypeDefaultConstructor then
+                generatedCode
+            else
+                List.head constructors
+                    |> Maybe.andThen
+                        (\h ->
+                            case h of
+                                TypeConstructor [ name ] [] ->
+                                    Just (Application (variable ctx.decoderPrefix "succeed") (variable "" name))
+
+                                _ ->
+                                    Nothing
+                        )
+                    |> Maybe.map (\h -> generatedCode ++ [ h ])
+                    |> Maybe.withDefault generatedCode
 
 
 genEncoderForUnionTypeConstructor ctx cons =
@@ -290,7 +295,7 @@ genDecoderForRecord ctx typeName recordAst =
                 case List.reverse l of
                     a :: cons ->
                         pipeOp decodeApp <|
-                            List.foldl (\item accum -> pipeOp (recordFieldDec ctx item) accum) (recordFieldDec ctx a) cons
+                            List.foldl (\item accum -> pipeOp (recordFieldDec ctx typeName item) accum) (recordFieldDec ctx typeName a) cons
 
                     _ ->
                         Debug.crash "Too much fields"
@@ -321,12 +326,20 @@ encodeRecordField ctx ( name, type_ ) =
         Tuple [ (String name), (Application <| typeEncoder ctx) (Access (variable "" "value") [ name ]) ]
 
 
-recordFieldDec ctx ( name, type_ ) =
+recordFieldDec ctx typeName ( name, type_ ) =
     let
         typeDecoder ctx =
             decodeType ctx type_
+
+        appTemplate funcName =
+            Application (Application (Variable <| qualifiedName ctx.decoderPrefix funcName) (String name)) (typeDecoder ctx)
     in
-        Application (Application (Variable <| qualifiedName ctx.decoderPrefix "required") (String name)) (typeDecoder ctx)
+        case Dict.get ( typeName, name ) ctx.defaultRecordValues of
+            Just defaultValue ->
+                Application (appTemplate "optional") defaultValue
+
+            Nothing ->
+                appTemplate "required"
 
 
 encodeType ctx type_ =

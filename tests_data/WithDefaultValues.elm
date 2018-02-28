@@ -9,7 +9,7 @@ type A
 
 type alias R =
     { a : Int
-    , b : List Char
+    , b : List String
     }
 
 
@@ -24,4 +24,4 @@ defaultA =
 -}
 initR : R -> R
 initR r =
-    { r | b = [ 'a' ] }
+    { r | b = [ "a" ] }
