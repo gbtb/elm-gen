@@ -198,4 +198,13 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('uses generates decoder for nested module' , () => {
+    shell.exec("./elm-gen d ../tests_data/Nested/Module.elm .");
+    expect(
+      readFile(outPath("ModuleDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("ModuleDecoders.elm"))
+    );
+  });
+
 })
