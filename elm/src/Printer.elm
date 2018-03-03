@@ -254,9 +254,9 @@ printRecord context exprList =
         h :: cons ->
             makeLines
                 (List.foldl
-                    (\( name, expr ) accum -> makeLines accum <| Line 1 (", " ++ name ++ " =") +> printExpression context expr)
+                    (\( name, expr ) accum -> makeLines accum <| Line 0 (", " ++ name ++ " =") +> printExpression context expr)
                     (Line 0 ("{ " ++ (Tuple.first h) ++ " =") +> printExpression context (Tuple.second h))
-                    exprList
+                    cons
                 )
                 (Line 0 "}")
 

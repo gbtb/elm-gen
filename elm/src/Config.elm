@@ -13,6 +13,9 @@ type alias NameModification =
     }
 
 
+{-| //DefaultValue
+-}
+initNameMod : NameModification
 initNameMod =
     { prefix = ""
     , suffix = ""

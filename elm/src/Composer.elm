@@ -222,8 +222,14 @@ composeFile model =
             moduleName
                 |> Result.andThen
                     (\moduleName ->
-                        getModuleNameFromOutputFileName "." model.outputFileName
-                            |> Result.fromMaybe "Wrong root directory and/or output file name. Can't generate output module declaration!"
+                        getModuleNameFromOutputFileName model.rootDir model.outputFileName
+                            |> Result.fromMaybe
+                                ("Wrong root directory "
+                                    ++ model.rootDir
+                                    ++ " and/or output file name "
+                                    ++ model.outputFileName
+                                    ++ ". Can't generate output module declaration!"
+                                )
                     )
     in
         Result.map

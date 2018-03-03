@@ -58,7 +58,7 @@ update msg model =
                         inputInfo.fileNames
                         inputInfo.genCommand
                 else
-                    updateInitialParse model parsedStatements inputInfo.fileNames inputInfo.genCommand
+                    updateInitialParse model parsedStatements inputInfo.fileNames inputInfo.rootDir inputInfo.genCommand
 
         ResolveDependencies ->
             let

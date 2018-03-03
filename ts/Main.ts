@@ -8,6 +8,7 @@ const usageStr = `usage: elm-gen [command] [input_file] [output_file] options
 Command can be: decoders | encoders | decoders,encoders and also shortcutted to d,e.
 For now single input_file and output_file only supported.
 Available options:
+    --rootDir   [path]  path to directory, from which to count Elm's module hierarchy
     --config    [path]  path to config file. Defaults to elm-gen.json
 `;
 const args = parseArgs(process.argv);
@@ -24,7 +25,9 @@ if (!args._ ||  args._.length < 4){
     var outPath = args._[4];
     const outFileName = getOutputFileName(path.basename(inputPath).split('.')[0], genCommand);
 
-    outPath = path.join(outPath, outFileName);
+    outPath = path.resolve(
+        path.join(outPath, outFileName)
+    );
 
     const Elm =  require("../elm/src/Main.elm");
     const app = Elm.Main.worker();
@@ -47,6 +50,13 @@ if (!args._ ||  args._.length < 4){
     if (args['config'])
         configPath = args['config'];
 
+    let rootDir = process.cwd();
+    if (args['rootDir'])
+        rootDir = args['rootDir'];
+
+    rootDir = path.resolve(rootDir);
+    configPath = path.resolve(configPath);
+
     if (fs.existsSync(configPath)){
         console.log(`Reading config: ${configPath}`)
         const configContents = fs.readFileSync(configPath, {encoding: 'utf-8'});
@@ -56,6 +66,7 @@ if (!args._ ||  args._.length < 4){
     const fileContents: string = fs.readFileSync(inputPath, {encoding: 'utf-8'});
     app.ports.input.send({
         fileContents: fileContents, 
+        rootDir: rootDir,
         fileNames: [outPath],
         genCommand: genCommand 
     });
@@ -70,6 +81,7 @@ if (!args._ ||  args._.length < 4){
 
         app.ports.input.send({
             fileContents: fileContents, 
+            rootDir: process.cwd(),
             fileNames: files.map(l => l.join(".") + ".elm"),
             genCommand: genCommand 
         });

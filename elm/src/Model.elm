@@ -28,18 +28,14 @@ type MetaComment
     | DefaultValue
 
 
-
--- #Ignore
-
-
+{-| //Ignore
+-}
 type alias TypeSet =
     Set.Set String
 
 
-
--- #Ignore
-
-
+{-| //Ignore
+-}
 type alias Model =
     { inputFileContent : String
     , outputFileName : String
@@ -66,6 +62,7 @@ initModel =
     { inputFileContent = ""
     , genCommand = Decoders
     , outputFileName = ""
+    , rootDir = ""
     , parsedStatements = []
     , newlyParsedStatements = []
     , unknownTypes = Set.empty
@@ -92,6 +89,9 @@ type alias Config =
     }
 
 
+{-| //DefaultValue
+-}
+initConfig : Config
 initConfig =
     { genCommand = Nothing
     , encodersName = { prefix = "", suffix = "Encoder", providedName = DontTouch }
