@@ -206,5 +206,14 @@ describe('Elm-gen by default produces decoder and encoders', () => {
       readFile(dataPath("ModuleDecoders.elm"))
     );
   });
+  
+  it('can print record values' , () => {
+    shell.exec("./elm-gen d ../tests_data/WithDefaultRecord.elm .");
+    expect(
+      readFile(outPath("WithDefaultRecordDecoders.elm"))
+    ).to.equal(
+      readFile(dataPath("WithDefaultRecordDecoders.elm"))
+    );
+  });
 
 })
