@@ -67,6 +67,9 @@ printExpression context e =
             List exprList ->
                 printList context exprList
 
+            Record exprList ->
+                printRecord context exprList
+
             Tuple exprList ->
                 printTuple context exprList
 
@@ -240,6 +243,24 @@ printImportStatement moduleName alias exportSet =
                    )
 
 
+printRecord context exprList =
+    case exprList of
+        [] ->
+            Line 0 "{}"
+
+        [ ( name, expr ) ] ->
+            Line 0 ("{ " ++ name ++ " =") +> printExpression context expr +> Line 0 "}"
+
+        h :: cons ->
+            makeLines
+                (List.foldl
+                    (\( name, expr ) accum -> makeLines accum <| Line 1 (", " ++ name ++ " =") +> printExpression context expr)
+                    (Line 0 ("{ " ++ (Tuple.first h) ++ " =") +> printExpression context (Tuple.second h))
+                    exprList
+                )
+                (Line 0 "}")
+
+
 printExportSet : ExportSet -> String
 printExportSet es =
     case es of
@@ -314,6 +335,9 @@ requireBraces e =
             False
 
         Tuple _ ->
+            False
+
+        Record _ ->
             False
 
         _ ->
