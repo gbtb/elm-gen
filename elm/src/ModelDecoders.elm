@@ -3,14 +3,14 @@ module ModelDecoders exposing (..)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import Config exposing (NameModification, ProvidedNameModification(..), UnionTypeGeneratorFeature(..))
-import Model exposing (Config, GenCommand(..), InputInfo)
+import Config exposing (NameModification, UnionTypeGeneratorFeature(..))
+import Model exposing (Config, GenCommand(..), InputInfo, MetaComment(..))
 
 
 configDecoder : JD.Decoder Config
 configDecoder =
     JD.decode Config
-        |> JD.optional "genCommand" (maybeDecoder genCommandDecoder) Nothing
+        |> JD.required "genCommand" (maybeDecoder genCommandDecoder)
         |> JD.required "encodersName" nameModificationDecoder
         |> JD.required "decodersName" nameModificationDecoder
         |> JD.required "outputFileName" nameModificationDecoder
@@ -31,6 +31,7 @@ inputInfoDecoder =
     JD.decode InputInfo
         |> JD.required "fileContents" JD.string
         |> JD.required "fileNames" (JD.list JD.string)
+        |> JD.required "rootDir" JD.string
         |> JD.required "genCommand" genCommandDecoder
 
 
@@ -41,12 +42,20 @@ maybeDecoder decoder =
         ]
 
 
+metaCommentDecoder : JD.Decoder MetaComment
+metaCommentDecoder =
+    JD.oneOf
+        [ JD.field "Ignore" (JD.succeed Ignore)
+        , JD.field "DefaultValue" (JD.succeed DefaultValue)
+        ]
+
+
 nameModificationDecoder : JD.Decoder NameModification
 nameModificationDecoder =
     JD.decode NameModification
-        |> JD.optional "prefix" JD.string ""
-        |> JD.optional "suffix" JD.string ""
-        |> JD.optional "providedName" providedNameModificationDecoder DontTouch
+        |> JD.required "prefix" JD.string
+        |> JD.required "suffix" JD.string
+        |> JD.required "providedName" providedNameModificationDecoder
 
 
 providedNameModificationDecoder : JD.Decoder ProvidedNameModification
@@ -54,7 +63,6 @@ providedNameModificationDecoder =
     JD.oneOf
         [ JD.field "DontTouch" (JD.succeed DontTouch)
         , JD.field "Replace" (JD.map Replace JD.string)
-        , JD.succeed DontTouch
         ]
 
 

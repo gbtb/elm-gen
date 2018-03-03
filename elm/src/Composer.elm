@@ -211,22 +211,34 @@ generate model =
         }
 
 
-composeFile : Model -> String
+composeFile : Model -> Result String String
 composeFile model =
     let
         moduleName =
             extractModuleDeclaration model.moduleDeclaration
-                |> fromJust "Cannot extract input file module declaration!"
+                |> Result.fromMaybe "Cannot extract input file module declaration!"
+
+        moduleDeclaration =
+            moduleName
+                |> Result.andThen
+                    (\moduleName ->
+                        getModuleNameFromOutputFileName "." model.outputFileName
+                            |> Result.fromMaybe "Wrong root directory and/or output file name. Can't generate output module declaration!"
+                    )
     in
-        String.join "\n" <|
-            List.map (produceString 4) <|
-                [ printStatement <| ModuleDeclaration (getModuleNameFromOutputFileName moduleName model.outputFileName) AllExport
-                , emptyLine
-                ]
-                    ++ printImports model.importsDict model.typesDict
-                    ++ (printDecoders model.generatedDecoders)
-                    ++ (printDecoders model.generatedEncoders)
-                    ++ [ emptyLine ]
+        Result.map
+            (\moduleDeclaration ->
+                String.join "\n" <|
+                    List.map (produceString 4) <|
+                        [ printStatement <| ModuleDeclaration moduleDeclaration AllExport
+                        , emptyLine
+                        ]
+                            ++ printImports model.importsDict model.typesDict
+                            ++ (printDecoders model.generatedDecoders)
+                            ++ (printDecoders model.generatedEncoders)
+                            ++ [ emptyLine ]
+            )
+            moduleDeclaration
 
 
 printDecoders decoders =

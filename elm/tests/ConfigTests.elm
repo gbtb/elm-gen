@@ -63,10 +63,18 @@ suite =
                         "../tests_data/PrTest.elm"
             , test "get output module name" <|
                 \_ ->
-                    Expect.equal (getModuleNameFromOutputFileName [ "Main", "Module" ] "Main/NewDecoders.elm")
-                        ([ "Main", "NewDecoders" ])
+                    Expect.equal (getModuleNameFromOutputFileName "." "./Main/NewDecoders.elm")
+                        (Just [ "Main", "NewDecoders" ])
             , test "get output module name 2" <|
                 \_ ->
-                    Expect.equal (getModuleNameFromOutputFileName [ "Module" ] "./NewDecoders.elm")
-                        ([ "NewDecoders" ])
+                    Expect.equal (getModuleNameFromOutputFileName "." "./NewDecoders.elm")
+                        (Just [ "NewDecoders" ])
+            , test "get output module name with absolute path and trailing /" <|
+                \_ ->
+                    Expect.equal (getModuleNameFromOutputFileName "/home/user/elm/" "/home/user/elm/NewDecoders.elm")
+                        (Just [ "NewDecoders" ])
+            , test "get output name with not-nested output file path" <|
+                \_ ->
+                    Expect.equal (getModuleNameFromOutputFileName "./Bla/Bla" "./NewDecoders.elm")
+                        (Nothing)
             ]

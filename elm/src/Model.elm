@@ -18,6 +18,7 @@ type GenCommand
 type alias InputInfo =
     { fileContents : String
     , fileNames : List String
+    , rootDir : String
     , genCommand : GenCommand
     }
 
@@ -42,6 +43,7 @@ type alias TypeSet =
 type alias Model =
     { inputFileContent : String
     , outputFileName : String
+    , rootDir : String
     , genCommand : GenCommand
     , parsedStatements : List Statement
     , newlyParsedStatements : List Statement

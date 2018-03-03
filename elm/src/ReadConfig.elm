@@ -69,17 +69,51 @@ makeOutputFileName config name =
 {-| Simply replaces last part of module declaration of input file with output file name.
     TODO: Handle cases with relative paths and stuff?
 -}
-getModuleNameFromOutputFileName : List String -> String -> List String
-getModuleNameFromOutputFileName moduleDeclaration outFile =
-    fromJust "Cannot get module name from output file name!" <|
-        Maybe.map2 (\declInit newName -> declInit ++ [ newName ]) (List.init moduleDeclaration) <|
-            Maybe.andThen identity <|
-                Maybe.andThen (.submatches >> List.head) <|
-                    List.head <|
-                        Regex.find
-                            Regex.All
-                            (Regex.regex <| "(\\w*).elm$")
-                            outFile
+getModuleNameFromOutputFileName : String -> String -> Maybe (List String)
+getModuleNameFromOutputFileName rootDir outFile =
+    let
+        rootDir_ =
+            if String.endsWith "/" rootDir then
+                String.dropRight 1 rootDir
+            else
+                rootDir
+
+        split =
+            Regex.split Regex.All (Regex.regex "[/\\\\]")
+
+        rootPath =
+            split rootDir_
+
+        outPath =
+            split outFile
+    in
+        getModuleNameHelper rootPath outPath
+            |> Maybe.andThen
+                (\outPath ->
+                    Maybe.map2
+                        (\init last -> init ++ [ last ])
+                        (List.init outPath)
+                        (List.last outPath
+                            |> Maybe.andThen
+                                (\fileName ->
+                                    String.split "." fileName |> List.head
+                                )
+                        )
+                )
+
+
+getModuleNameHelper rootPath outPath =
+    case rootPath of
+        x :: xs ->
+            case outPath of
+                y :: ys ->
+                    getModuleNameHelper xs ys
+
+                [] ->
+                    Nothing
+
+        [] ->
+            Just outPath
 
 
 getNameFunc : NameModification -> String -> String

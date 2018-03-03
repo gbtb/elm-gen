@@ -94,10 +94,15 @@ update msg model =
                 fileContent =
                     composeFile model
             in
-                ( model, Cmd.batch [ logMessage "Printing...", output ( model.outputFileName, fileContent ) ] )
+                case fileContent of
+                    Ok fileContent ->
+                        ( model, Cmd.batch [ logMessage "Printing...", output ( model.outputFileName, fileContent ) ] )
+
+                    Err e ->
+                        ( model, errorMessage <| "Error during printing stage: " ++ e )
 
 
-updateInitialParse model parsedStatements fileNames genCommand =
+updateInitialParse model parsedStatements fileNames rootDir genCommand =
     let
         metaParseResult =
             applyMetaComments parsedStatements_
@@ -114,6 +119,7 @@ updateInitialParse model parsedStatements fileNames genCommand =
             | parsedStatements = metaParseResult.statements
             , genCommand = genCommand
             , outputFileName = ReadConfig.makeOutputFileName model.config (List.head fileNames |> fromJust "Output file name was not provided!")
+            , rootDir = rootDir
             , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
             , defaultUnionValues = Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
           }
