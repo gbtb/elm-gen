@@ -42,11 +42,10 @@ script:
   - cd ..
   - npm test
 
-jobs:
-  include:
-    - stage: npm release
-      script: echo "Deploying to npm ..."
-      deploy:
-        provider: npm
-        api_key: $NPM_API_KEY
-        on: deploy-npm-release
+deploy:
+  provider: npm
+  email: $EMAIL
+  api_key: $NPM_API_KEY
+  on:
+    branch: master
+  tag: next

@@ -1,15 +1,20 @@
 {
   "name": "elm-gen",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Experimental CLI tool for generating Elm JSON Decoders and Encoders, written mostly in Elm",
-  "main": "index.js",
   "scripts": {
     "test": "npm run build && mocha --reporter spec ./dist/tests",
     "build": "webpack",
     "unit-tests": "npm run build && mocha --reporter spec ./dist/unit-tests"
   },
-  "keywords": [],
-  "author": "",
+  "files": ["dist/elm-gen"],
+  "bin" : {"elm-gen": "dist/elm-gen" },
+  "repository" :
+    { "type" : "git"
+    , "url" : "https://github.com/gbtb/elm-gen.git"
+    },
+  "keywords": ["elm", "json", "decoders"],
+  "author": "gbtb",
   "license": "ISC",
   "devDependencies": {
     "@types/chai": "^4.0.10",
