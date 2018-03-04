@@ -3,13 +3,6 @@ const CleanWebpackPlugin = require('clean-webpack-plugin');
 const BannerPlugin = require('banner-webpack-plugin');
 const WebpackShellPlugin = require('webpack-shell-plugin');
 
-function getMakePath()
-{
-  if (process.env.TRAVIS){
-
-  }
-}
-
 module.exports = {
   target: 'node',
   entry: {  
