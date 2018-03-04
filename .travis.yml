@@ -37,4 +37,7 @@ install:
   - npm install
 
 script:
+  - cd elm
+  - elm-test
+  - cd ..
   - npm test
