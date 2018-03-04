@@ -38,6 +38,6 @@ install:
 
 script:
   - cd elm
-  - elm-test
+  - ../node_modules/elm-test/bin/elm-test
   - cd ..
   - npm test
