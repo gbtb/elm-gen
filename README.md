@@ -1,5 +1,5 @@
 # elm-gen
-Experimental CLI tool for generating Elm JSON Decoders and Encoders written mostly in Elm. 
+Experimental CLI tool for generating Elm JSON Decoders and Encoders, written mostly in Elm. 
 Based on top of [elm-ast](https://github.com/Bogdanp/elm-ast) parsing library.
 
 ## Usage

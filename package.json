@@ -1,7 +1,7 @@
 {
   "name": "elm-gen",
   "version": "0.1.0",
-  "description": "",
+  "description": "Experimental CLI tool for generating Elm JSON Decoders and Encoders, written mostly in Elm",
   "main": "index.js",
   "scripts": {
     "test": "npm run build && mocha --reporter spec ./dist/tests",
