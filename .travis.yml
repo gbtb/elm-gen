@@ -49,3 +49,4 @@ deploy:
   on:
     branch: master
   tag: next
+  skip_cleanup: true
