@@ -136,3 +136,18 @@ defaultDecoderNameFunc =
 
 defaultEncoderNameFunc =
     getNameFunc { initNameMod | suffix = "Encoder" }
+
+
+updateConfig : Config -> GenCommand -> Config
+updateConfig config genCommand =
+    let
+        emptyOutputFileName =
+            { prefix = ""
+            , suffix = ""
+            , providedName = DontTouch
+            }
+    in
+        if config.outputFileName == emptyOutputFileName then
+            { config | outputFileName = { emptyOutputFileName | suffix = (toString genCommand) } }
+        else
+            config

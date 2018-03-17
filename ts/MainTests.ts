@@ -183,9 +183,9 @@ describe('Elm-gen by default produces decoder and encoders', () => {
   it('uses provided config' , () => {
     shell.exec("./elm-gen d ../tests_data/Basic.elm . --config ../tests_data/elm-gen.json");
     expect(
-      readFile(outPath("BasicDecodersWithConfig.elm"))
+      readFile(outPath("BasicWithConfig.elm"))
     ).to.equal(
-      readFile(dataPath("BasicDecodersWithConfig.elm"))
+      readFile(dataPath("BasicWithConfig.elm"))
     );
   });
 

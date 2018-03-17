@@ -114,14 +114,19 @@ updateInitialParse model parsedStatements fileNames rootDir genCommand =
 
                 Ok ( _, _, statements ) ->
                     statements
+
+        updatedConfig =
+            ReadConfig.updateConfig model.config genCommand
     in
         ( { model
             | parsedStatements = metaParseResult.statements
             , genCommand = genCommand
-            , outputFileName = ReadConfig.makeOutputFileName model.config (List.head fileNames |> fromJust "Output file name was not provided!")
+            , outputFileName = ReadConfig.makeOutputFileName updatedConfig (List.head fileNames |> fromJust "Output file name was not provided!")
             , rootDir = rootDir
             , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
-            , defaultUnionValues = Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+            , defaultUnionValues =
+                Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+            , config = updatedConfig
           }
         , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
         )

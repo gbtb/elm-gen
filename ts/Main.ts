@@ -23,7 +23,7 @@ if (!args._ ||  args._.length < 4){
     const genCommand = parseGenCommand(args._[2]);
     const inputPath = args._[3];
     var outPath = args._[4];
-    const outFileName = getOutputFileName(path.basename(inputPath).split('.')[0], genCommand);
+    const outFileName = path.basename(inputPath);//true file name calculated on elm's side
 
     outPath = path.resolve(
         path.join(outPath, outFileName)
