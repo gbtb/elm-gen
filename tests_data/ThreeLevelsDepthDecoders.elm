@@ -2,7 +2,6 @@ module ThreeLevelsDepthDecoders exposing (..)
 
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
-import Json.Encode as JE
 import DependentOnOtherFile exposing (DependentType(..))
 import DependentTypes exposing (Basic(..), Record)
 import ThreeLevelsDepth exposing (NewType)

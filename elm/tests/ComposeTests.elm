@@ -10,6 +10,7 @@ import StatementFilters exposing (..)
 import Model exposing (..)
 import Dict
 import Set
+import PrintRepr exposing (..)
 
 
 suite : Test
@@ -62,4 +63,19 @@ suite =
                 Expect.equal
                     (extractEncoder [ "Value" ] <| FunctionTypeDeclaration "basicEncoder" (TypeApplication (TypeConstructor [ "Basic" ] []) (TypeConstructor [ "Value" ] [])))
                     (Just ( "Basic", "basicEncoder" ))
+        , test "prints correct default packages import for decoders only" <|
+            \_ ->
+                Expect.equal
+                    (printImports Decoders Dict.empty Dict.empty)
+                    ([ Line 0 "import Json.Decode as JD", Line 0 "import Json.Decode.Pipeline as JD" ])
+        , test "prints correct default packages import for decoders and encoders" <|
+            \_ ->
+                Expect.equal
+                    (printImports DecodersAndEncoders Dict.empty Dict.empty)
+                    ([ Line 0 "import Json.Decode as JD", Line 0 "import Json.Decode.Pipeline as JD", Line 0 "import Json.Encode as JE" ])
+        , test "prints correct default packages import for encoders only" <|
+            \_ ->
+                Expect.equal
+                    (printImports Encoders Dict.empty Dict.empty)
+                    ([ Line 0 "import Json.Encode as JE" ])
         ]

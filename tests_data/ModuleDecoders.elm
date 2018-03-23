@@ -2,7 +2,6 @@ module ModuleDecoders exposing (..)
 
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
-import Json.Encode as JE
 import Nested.Module exposing (T(..))
 
 

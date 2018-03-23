@@ -2,7 +2,6 @@ module WithDefaultRecordDecoders exposing (..)
 
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
-import Json.Encode as JE
 import WithDefaultRecord exposing (A, R)
 
 

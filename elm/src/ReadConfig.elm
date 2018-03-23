@@ -6,7 +6,6 @@ import Json.Decode as JD
 import List
 import List.Extra as List
 import Config exposing (..)
-import Path.Generic exposing (..)
 import Regex
 import Utils exposing (..)
 

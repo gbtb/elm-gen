@@ -239,7 +239,7 @@ composeFile model =
                         [ printStatement <| ModuleDeclaration moduleDeclaration AllExport
                         , emptyLine
                         ]
-                            ++ printImports model.importsDict model.typesDict
+                            ++ printImports model.genCommand model.importsDict model.typesDict
                             ++ (printDecoders model.generatedDecoders)
                             ++ (printDecoders model.generatedEncoders)
                             ++ [ emptyLine ]
@@ -386,13 +386,27 @@ getImportedTypes exportSet =
             []
 
 
-printImports importsDict typesDict =
+printImports command importsDict typesDict =
     let
-        defaultImports =
+        encodersImports =
+            [ ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing) ]
+
+        decodersImports =
             [ ImportStatement [ "Json", "Decode" ] (Just "JD") (Nothing)
             , ImportStatement [ "Json", "Decode", "Pipeline" ] (Just "JD") (Nothing)
-            , ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing)
             ]
+
+        extImports1 =
+            if willGenDecoder command then
+                decodersImports
+            else
+                []
+
+        extImports2 =
+            if willGenEncoder command then
+                extImports1 ++ encodersImports
+            else
+                extImports1
 
         toExport ts =
             ts |> Set.toList |> List.map (\name -> TypeExport name (getExportSet typesDict name)) |> SubsetExport |> Just
@@ -402,7 +416,7 @@ printImports importsDict typesDict =
                 Dict.toList
                     importsDict
     in
-        List.map printStatement (defaultImports ++ typesImports)
+        List.map printStatement (extImports2 ++ typesImports)
 
 
 getExportSet typesDict name =

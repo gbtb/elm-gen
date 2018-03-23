@@ -2,7 +2,6 @@ module TransitiveImportDecoders exposing (..)
 
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
-import Json.Encode as JE
 import TransitiveImport exposing (A(..), R)
 import TransitiveImport2 exposing (NestedA(..), NestedR)
 
