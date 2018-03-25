@@ -30,7 +30,7 @@ fromOk r =
 
 getTypeName t =
     case t of
-        TypeConstructor [ name ] [] ->
+        TypeConstructor name [] ->
             name
 
         _ ->
@@ -55,15 +55,6 @@ makeCmd =
 
 keysSet d =
     Set.fromList <| Dict.keys d
-
-
-getDecoderName typeName makeName =
-    case String.uncons typeName of
-        Just ( h, tail ) ->
-            makeName <| String.cons (Char.toLower h) (tail)
-
-        Nothing ->
-            ""
 
 
 willGenDecoder genCommand =

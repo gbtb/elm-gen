@@ -9,14 +9,16 @@ import Char
 import Utils exposing (..)
 import List.Extra as List
 import ReadConfig exposing (..)
+import Model exposing (TypeName)
+import TypeName
 
 
 type alias TransformationContext =
     { decoderPrefix : String
     , assumeUnionTypeDefaultConstructor : Bool
-    , knownTypes : Dict.Dict String (List String)
+    , knownTypes : Dict.Dict TypeName (List String)
     , makeName : String -> String
-    , defaultRecordValues : Dict.Dict ( String, String ) Expression
+    , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict String Expression
     }
 
@@ -27,15 +29,15 @@ defaultContext isDecoders =
 
 knownTypesForDecoders prefix =
     [ "Int", "Float", "String", "List", "Array", "Char", "Bool" ]
-        |> List.map (\type_ -> ( type_, qualifiedName prefix (String.toLower type_) ))
+        |> List.map (\type_ -> ( TypeName.fromStr type_, qualifiedName prefix (String.toLower type_) ))
         |> Dict.fromList
 
 
 knownTypesForEncoders prefix nameFunc =
     ([ "Int", "Float", "String", "Char", "Bool" ]
-        |> List.map (\type_ -> ( type_, qualifiedName prefix (String.toLower type_) ))
+        |> List.map (\type_ -> ( TypeName.fromStr type_, qualifiedName prefix (String.toLower type_) ))
     )
-        ++ ([ "List", "Array" ] |> List.map (\type_ -> ( type_, qualifiedName "" (getDecoderName type_ nameFunc) )))
+        ++ ([ "List", "Array" ] |> List.map (\type_ -> ( TypeName.fromStr type_, qualifiedName "" (TypeName.getDecoderName [ type_ ] nameFunc) )))
         |> Dict.fromList
 
 
@@ -64,7 +66,7 @@ genDecoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName context.makeName
+                    TypeName.getDecoderName typeName context.makeName
 
                 decoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -82,7 +84,7 @@ genDecoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName context.makeName
+                    TypeName.getDecoderName typeName context.makeName
 
                 decoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -107,7 +109,7 @@ genEncoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName context.makeName
+                    TypeName.getDecoderName typeName context.makeName
 
                 encoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -115,7 +117,7 @@ genEncoder context stmt =
                     else
                         [ "Value" ]
             in
-                [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor [ typeName ] [])) (TypeConstructor encoderType [])
+                [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
                 , FunctionDeclaration (decoderName) [ variable "" "value" ] <| genEncoderForRecord context typeName rightPart
                 ]
 
@@ -125,7 +127,7 @@ genEncoder context stmt =
                     getTypeName leftPart
 
                 decoderName =
-                    getDecoderName typeName context.makeName
+                    TypeName.getDecoderName typeName context.makeName
 
                 encoderType =
                     if String.length context.decoderPrefix > 0 then
@@ -133,7 +135,7 @@ genEncoder context stmt =
                     else
                         [ "Value" ]
             in
-                [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor [ typeName ] [])) (TypeConstructor encoderType [])
+                [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
                 , FunctionDeclaration (decoderName) [ variable "" "value" ] <| genEncoderForUnionType context stmt
                 ]
 
@@ -227,12 +229,12 @@ genEncoderForUnionTypeConstructor ctx cons =
 
 genDecoderForUnionTypeConstructor ctx cons =
     case cons of
-        TypeConstructor [ name ] args ->
+        TypeConstructor typename args ->
             Application
                 (Application (variable ctx.decoderPrefix "field")
-                    (String name)
+                    (String <| TypeName.toStr typename)
                 )
-                (decodeUnionTypeArgs ctx name args)
+                (decodeUnionTypeArgs ctx typename args)
 
         _ ->
             Debug.crash "Invalid union type constructor!"
@@ -246,14 +248,14 @@ decodeUnionTypeArgs ctx name args =
         start =
             Application
                 (variable ctx.decoderPrefix <| getMapFun n)
-                (variable "" name)
+                (Variable name)
 
         indexAppl idx =
             Application (Application (variable ctx.decoderPrefix "index") (Integer idx))
     in
         case args of
             [] ->
-                (Application (variable ctx.decoderPrefix "succeed") (variable "" name))
+                (Application (variable ctx.decoderPrefix "succeed") (Variable name))
 
             [ a ] ->
                 Application start (decodeType ctx a)
@@ -284,11 +286,11 @@ encodeUnionTypeArgs ctx name args =
                             List.map (\( type_, var ) -> Application (encodeType ctx type_) var) (List.zip l <| getDummyVariables n)
 
 
-genDecoderForRecord : TransformationContext -> String -> Type -> Expression
+genDecoderForRecord : TransformationContext -> TypeName -> Type -> Expression
 genDecoderForRecord ctx typeName recordAst =
     let
         decodeApp =
-            (Application (Variable <| qualifiedName ctx.decoderPrefix "decode") (Variable [ typeName ]))
+            (Application (Variable <| qualifiedName ctx.decoderPrefix "decode") (Variable typeName))
     in
         case recordAst of
             TypeRecord l ->
@@ -304,11 +306,11 @@ genDecoderForRecord ctx typeName recordAst =
                 Debug.crash "It is not a record!"
 
 
-genEncoderForRecord : TransformationContext -> String -> Type -> Expression
+genEncoderForRecord : TransformationContext -> TypeName -> Type -> Expression
 genEncoderForRecord ctx typeName recordAst =
     let
         encodeApp =
-            (Application (Variable <| qualifiedName ctx.decoderPrefix "decode") (Variable [ typeName ]))
+            (Application (Variable <| qualifiedName ctx.decoderPrefix "decode") (Variable typeName))
     in
         case recordAst of
             TypeRecord l ->
@@ -344,7 +346,7 @@ recordFieldDec ctx typeName ( name, type_ ) =
 
 encodeType ctx type_ =
     case type_ of
-        TypeConstructor [ typeName ] argsTypes ->
+        TypeConstructor typeName argsTypes ->
             encodeKnownTypeConstructor ctx typeName argsTypes
 
         TypeTuple [ a ] ->
@@ -366,7 +368,7 @@ encodeKnownTypeConstructor ctx typeName argsTypes =
     let
         firstType =
             Dict.get typeName ctx.knownTypes
-                |> fromJust ("Unknown type somehow leaked to transformation stage." ++ typeName)
+                |> fromJust ("Unknown type somehow leaked to transformation stage." ++ TypeName.toStr typeName)
                 |> Variable
     in
         case argsTypes of
@@ -379,7 +381,7 @@ encodeKnownTypeConstructor ctx typeName argsTypes =
 
 decodeType ctx type_ =
     case type_ of
-        TypeConstructor [ typeName ] argsTypes ->
+        TypeConstructor typeName argsTypes ->
             decodeKnownTypeConstructor ctx typeName argsTypes
 
         TypeTuple [ a ] ->
@@ -434,7 +436,7 @@ genMaybeEncoder nameFunc =
 genEncoderForMappable ctx typeName =
     let
         funcName =
-            ((String.toLower typeName) ++ "Encoder")
+            ((TypeName.toLowerCaseName typeName) ++ "Encoder")
 
         value =
             TypeConstructor (qualifiedName ctx.decoderPrefix "Value") []
@@ -444,13 +446,13 @@ genEncoderForMappable ctx typeName =
                 (TypeApplication (TypeVariable "a")
                     (value)
                 )
-                (TypeApplication (TypeConstructor [ typeName ] ([ TypeVariable "a" ])) (value))
+                (TypeApplication (TypeConstructor typeName ([ TypeVariable "a" ])) (value))
             )
         , FunctionDeclaration funcName
             ([ Variable [ "encoder" ], Variable [ "value" ] ])
             (BinOp (Variable [ "<|" ])
-                (variable ctx.decoderPrefix (String.toLower typeName))
-                (Application (Application (Access (variable "" typeName) [ "map" ]) (Variable [ "encoder" ])) (Variable [ "value" ]))
+                (variable ctx.decoderPrefix (TypeName.toLowerCaseName typeName))
+                (Application (Application (Access (Variable typeName) [ "map" ]) (Variable [ "encoder" ])) (Variable [ "value" ]))
             )
         ]
 
@@ -459,7 +461,7 @@ decodeKnownTypeConstructor ctx typeName argsTypes =
     let
         firstType =
             Dict.get typeName ctx.knownTypes
-                |> fromJust ("Unknown type somehow leaked to transformation stage." ++ typeName)
+                |> fromJust ("Unknown type somehow leaked to transformation stage." ++ TypeName.toStr typeName)
                 |> Variable
     in
         case argsTypes of

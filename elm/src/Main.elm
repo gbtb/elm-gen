@@ -73,7 +73,7 @@ update msg model =
                 else
                     let
                         importsDict =
-                            makeFileLoadRequest new_model
+                            makeFileLoadRequest (Debug.log "n" new_model)
                     in
                         case importsDict of
                             Ok dict ->

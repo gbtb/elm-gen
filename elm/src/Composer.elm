@@ -17,21 +17,22 @@ import Model exposing (..)
 import Config exposing (..)
 import StatementFilters exposing (..)
 import ReadConfig exposing (..)
+import TypeName
 
 
 type alias GenContext =
-    { typesDict : Dict.Dict String Statement
-    , graph : Dict.Dict String TypeSet
-    , userDefinedTypes : Dict.Dict String (List String)
+    { typesDict : Dict.Dict TypeName Statement
+    , graph : Dict.Dict TypeName TypeSet
+    , userDefinedTypes : Dict.Dict TypeName (List String)
     , excludedTypes : TypeSet
-    , defaultRecordValues : Dict.Dict ( String, String ) Expression
+    , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict String Expression
     , generatorFunc : TransformationContext -> Statement -> List Statement
     , prefix : String
     , makeName : String -> String
     , isDecoders : Bool
     , maybeStub : Statement
-    , mappableStubs : Dict.Dict String (List Statement)
+    , mappableStubs : Dict.Dict TypeName (List Statement)
     }
 
 
@@ -44,7 +45,7 @@ encTcName =
 
 
 mappableStubs ctx =
-    Dict.fromList <| List.map (\i -> ( i, genEncoderForMappable ctx i )) [ "List", "Array" ]
+    Dict.fromList <| List.map (\i -> ( TypeName.fromStr i, genEncoderForMappable ctx i )) [ "List", "Array" ]
 
 
 makeFileLoadRequest : Model -> Result String (Dict.Dict (List String) TypeSet)
@@ -82,8 +83,9 @@ resolveDependencies model =
 
         decoders =
             Dict.fromList <|
-                List.filterMap (extractDecoder decTcName) <|
-                    statements
+                Debug.log "d" <|
+                    List.filterMap (extractDecoder decTcName) <|
+                        statements
 
         encoders =
             Dict.fromList <|
@@ -160,7 +162,7 @@ generate model =
         { model
             | moduleDeclaration = moduleDeclaration
             , generatedDecoders =
-                if (model.genCommand == Decoders) || (model.genCommand == DecodersAndEncoders) then
+                if willGenDecoder model.genCommand then
                     let
                         nameFunc =
                             (getNameFunc model.config.decodersName)
@@ -183,7 +185,7 @@ generate model =
                 else
                     []
             , generatedEncoders =
-                if (model.genCommand == Encoders) || (model.genCommand == DecodersAndEncoders) then
+                if willGenEncoder model.genCommand then
                     let
                         nameFunc =
                             (getNameFunc model.config.encodersName)
@@ -294,7 +296,7 @@ makeTypesDict types =
 
 
 makeNameMapping nameFunc types =
-    List.map (\type_ -> ( type_, [ getDecoderName type_ nameFunc ] )) types |> Dict.fromList
+    List.map (\type_ -> ( type_, [ TypeName.getDecoderName type_ nameFunc ] )) types |> Dict.fromList
 
 
 generateDecoders genContext graphHeads =
@@ -302,7 +304,7 @@ generateDecoders genContext graphHeads =
         excludeTypes =
             Set.union genContext.excludedTypes <|
                 if genContext.isDecoders then
-                    (Set.fromList [ "List", "Array" ])
+                    (Set.fromList [ TypeName.fromStr "List", TypeName.fromStr "Array" ])
                 else
                     Set.empty
 
@@ -312,9 +314,9 @@ generateDecoders genContext graphHeads =
         List.map (generateDecodersHelper genContext) typesList |> Maybe.values
 
 
-generateDecodersHelper : GenContext -> String -> Maybe (List Statement)
+generateDecodersHelper : GenContext -> TypeName -> Maybe (List Statement)
 generateDecodersHelper genContext item =
-    if item == "Maybe" then
+    if item == TypeName.fromStr "Maybe" then
         Just [ genContext.maybeStub ]
     else
         Maybe.orLazy (Dict.get item genContext.mappableStubs)
@@ -338,7 +340,7 @@ generateDecodersHelper genContext item =
                                     stmt
 
                         Nothing ->
-                            Debug.crash ("Type not found in types dict! " ++ item ++ (toString genContext.mappableStubs))
+                            Debug.crash ("Type not found in types dict! " ++ (TypeName.toStr item) ++ (toString genContext.mappableStubs))
             )
 
 

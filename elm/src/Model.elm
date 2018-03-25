@@ -26,12 +26,19 @@ type alias InputInfo =
 type MetaComment
     = Ignore
     | DefaultValue
+    | NoDeclaration
 
 
 {-| //Ignore
 -}
 type alias TypeSet =
-    Set.Set String
+    Set.Set TypeName
+
+
+{-| //Ignore
+-}
+type alias TypeName =
+    List String
 
 
 {-| //Ignore
@@ -48,9 +55,9 @@ type alias Model =
     , dependencies : ( TypeSet, Dict.Dict String TypeSet )
     , importsDict : Dict.Dict (List String) TypeSet
     , moduleDeclaration : Statement
-    , providedDecoders : Dict.Dict String String
-    , providedEncoders : Dict.Dict String String
-    , defaultRecordValues : Dict.Dict ( String, String ) Expression
+    , providedDecoders : Dict.Dict TypeName String
+    , providedEncoders : Dict.Dict TypeName String
+    , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict String Expression
     , generatedDecoders : List (List Statement)
     , generatedEncoders : List (List Statement)

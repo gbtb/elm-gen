@@ -6,14 +6,19 @@ import Ast.Expression exposing (..)
 import Dict
 import Set
 import Utils exposing (..)
+import TypeName
+import Model exposing (TypeSet)
 
 
-knownTypes : Set.Set String
+knownTypes : TypeSet
 knownTypes =
-    Set.fromList [ "Bool", "Char", "Int", "Float", "String" ]
+    Set.map TypeName.fromStr <| Set.fromList [ "Bool", "Char", "Int", "Float", "String" ]
 
 
-makeDependencyGraph : Set.Set String -> Set.Set String -> List Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) )
+
+--makeDependencyGraph : Set.Set String -> Set.Set String -> List Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) )
+
+
 makeDependencyGraph nonHeads knownTypes statements =
     let
         ( nonHeads_, graph ) =
@@ -59,7 +64,7 @@ graphHelper knownTypes stmt ( nonHeads, graph ) =
 updateGraphForHardcodedTypes retrievedDeps d =
     let
         hard =
-            Set.intersect (Set.fromList [ "Maybe", "List", "Array" ]) retrievedDeps
+            Set.intersect (Set.map TypeName.fromStr <| Set.fromList [ "Maybe", "List", "Array" ]) retrievedDeps
     in
         Set.foldl (\item dict -> Dict.insert item Set.empty dict) d hard
 
@@ -68,7 +73,7 @@ setdiff =
     flip Set.diff
 
 
-getDependencies : Set.Set String -> Statement -> Set.Set String
+getDependencies : TypeSet -> Statement -> TypeSet
 getDependencies knownTypes type_ =
     case type_ of
         TypeDeclaration _ listOfConstructors ->
@@ -96,7 +101,7 @@ traverseType knownTypes type_ useQualType =
                 let
                     start =
                         if useQualType then
-                            (Set.fromList [ String.join "." qualType ])
+                            (Set.fromList [ qualType ])
                         else
                             Set.empty
                 in
