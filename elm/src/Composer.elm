@@ -89,9 +89,8 @@ resolveDependencies model =
 
         decoders =
             Dict.fromList <|
-                Debug.log "d" <|
-                    List.filterMap (extractDecoder decTcName) <|
-                        statements
+                List.filterMap (extractDecoder decTcName) <|
+                    statements
 
         encoders =
             Dict.fromList <|
@@ -126,7 +125,12 @@ resolveDependencies model =
                 |> List.foldl Set.union Set.empty
 
         unknownTypes =
-            Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict) |> (\s -> Set.diff s <| Set.fromList [ "Maybe", "List", "Array" ])
+            Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict)
+                |> (\s ->
+                        Set.diff s <|
+                            Set.fromList <|
+                                List.map TypeName.fromStr [ "Maybe", "List", "Array" ]
+                   )
     in
         { model
             | typesDict = typesDict
@@ -262,7 +266,7 @@ printDecoders decoders =
         List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
-getTypes : GenCommand -> Dict.Dict String String -> Dict.Dict String String -> Set.Set String -> List Statement -> List String
+getTypes : GenCommand -> Dict.Dict TypeName String -> Dict.Dict TypeName String -> Set.Set TypeName -> List Statement -> List TypeName
 getTypes genCommand decoders encoders unknownTypes lst =
     List.sort <|
         List.concat <|
@@ -291,7 +295,7 @@ getTypes genCommand decoders encoders unknownTypes lst =
                                         else
                                             Nothing
                                 in
-                                    List.filterMap identity [ decoder, encoder, typeItself ]
+                                    List.filterMap identity [ Maybe.map TypeName.fromStr decoder, Maybe.map TypeName.fromStr encoder, typeItself ]
                             )
                 )
                 lst
@@ -427,11 +431,7 @@ printImports command importsDict typesDict =
 
 
 toExportHelper typesDict name =
-    let
-        name_ =
-            name
-    in
-        TypeExport name_ (getExportSet typesDict name_)
+    TypeExport (TypeName.toSingleName name) (getExportSet typesDict name)
 
 
 getExportSet typesDict name =

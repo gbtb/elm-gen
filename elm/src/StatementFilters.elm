@@ -3,7 +3,8 @@ module StatementFilters exposing (..)
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
 import Regex
-import Model exposing (MetaComment(..))
+import Model exposing (MetaComment(..), TypeName)
+import TypeName
 
 
 asFilter : Maybe a -> Bool
@@ -18,11 +19,11 @@ asFilter mb =
 
 extractType s =
     case s of
-        TypeAliasDeclaration (TypeConstructor [ consName ] []) (TypeRecord r) ->
-            Just ( consName, False )
+        TypeAliasDeclaration (TypeConstructor typeName []) (TypeRecord r) ->
+            Just ( typeName, False )
 
-        TypeDeclaration (TypeConstructor [ consName ] []) _ ->
-            Just ( consName, True )
+        TypeDeclaration (TypeConstructor typeName []) _ ->
+            Just ( typeName, True )
 
         _ ->
             Nothing
@@ -58,12 +59,13 @@ extractFunctionTypeDecl s =
             Nothing
 
 
+extractDecoder : TypeName -> Statement -> Maybe ( TypeName, String )
 extractDecoder tcName s =
     case s of
         FunctionTypeDeclaration name type_ ->
             case type_ of
-                TypeConstructor tcName [ TypeConstructor [ typeName ] [] ] ->
-                    Just ( typeName, name )
+                TypeConstructor tcName [ TypeConstructor l [] ] ->
+                    Just ( l, name )
 
                 _ ->
                     Nothing
@@ -97,7 +99,7 @@ extractEncoder tcName s =
 
 eeHelper tcName s =
     case s of
-        TypeApplication (TypeConstructor [ typeName ] _) (TypeConstructor tcName []) ->
+        TypeApplication (TypeConstructor typeName _) (TypeConstructor tcName []) ->
             Just typeName
 
         TypeApplication s1 s2 ->
