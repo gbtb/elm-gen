@@ -26,9 +26,9 @@ suite =
                         ]
                     )
                     (Dict.fromList
-                        [ ( "A", TypeDeclaration (TypeConstructor [ "A" ] []) ([ TypeConstructor [ "A" ] [] ]) )
-                        , ( "B", TypeDeclaration (TypeConstructor [ "B" ] []) ([ TypeConstructor [ "B" ] ([ TypeConstructor [ "A" ] [] ]) ]) )
-                        , ( "C", TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ])) )
+                        [ ( TypeName.fromStr "A", TypeDeclaration (TypeConstructor [ "A" ] []) ([ TypeConstructor [ "A" ] [] ]) )
+                        , ( TypeName.fromStr "B", TypeDeclaration (TypeConstructor [ "B" ] []) ([ TypeConstructor [ "B" ] ([ TypeConstructor [ "A" ] [] ]) ]) )
+                        , ( TypeName.fromStr "C", TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ])) )
                         ]
                     )
         , test "can form request for files to load types declarations" <|
