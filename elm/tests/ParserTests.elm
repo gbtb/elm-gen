@@ -40,11 +40,11 @@ suite =
           <|
             \_ ->
                 Expect.equal (extractUnionTypeDefault <| FunctionTypeDeclaration "defaultA" (TypeConstructor [ "A", "B" ] []))
-                    (Just "A.B")
+                    (Just [ "A", "B" ])
         , test "extracts default record type value" <|
             \_ ->
                 Expect.equal (extractRecordTypeDefault <| FunctionTypeDeclaration "initR" (TypeApplication (TypeConstructor [ "R" ] []) (TypeConstructor [ "R" ] [])))
-                    (Just "R")
+                    (Just [ "R" ])
         , test "extracts default value for union type" <|
             \_ ->
                 Expect.equal

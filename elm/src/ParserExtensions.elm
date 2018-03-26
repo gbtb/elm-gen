@@ -3,7 +3,7 @@ module ParserExtensions exposing (..)
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
 import StatementFilters exposing (extractMetaComment, extractType, asFilter, extractRecordTypeDefault, extractUnionTypeDefault, extractRecord)
-import Model exposing (MetaComment(..))
+import Model exposing (MetaComment(..), TypeName)
 import Maybe.Extra as Maybe
 import Dict
 
@@ -11,8 +11,8 @@ import Dict
 applyMetaComments :
     List Statement
     -> { statements : List Statement
-       , defaultRecordValues : Dict.Dict ( String, String ) Expression
-       , defaultUnionValues : Dict.Dict String Expression
+       , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
+       , defaultUnionValues : Dict.Dict TypeName Expression
        }
 applyMetaComments stmnts =
     let
@@ -27,9 +27,9 @@ applyMetaComments stmnts =
 
 type alias FoldHelper =
     { metaComment : Maybe MetaComment
-    , typeName : Maybe String
-    , defaultRecordValues : Dict.Dict ( String, String ) Expression
-    , defaultUnionValues : Dict.Dict String Expression
+    , typeName : Maybe TypeName
+    , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
+    , defaultUnionValues : Dict.Dict TypeName Expression
     , statements : List Statement
     }
 
@@ -104,7 +104,6 @@ defaultValueHelper accum item =
     }
 
 
-extractDefaultValues : { b | defaultRecordValues : Dict.Dict ( comparable, String ) Expression, defaultUnionValues : Dict.Dict comparable Expression, typeName : Maybe comparable } -> Statement -> Maybe { b | defaultRecordValues : Dict.Dict ( comparable, String ) Expression, defaultUnionValues : Dict.Dict comparable Expression, typeName : Maybe a }
 extractDefaultValues accum item =
     Maybe.andThen
         (\typeName ->

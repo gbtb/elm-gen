@@ -58,7 +58,7 @@ type alias Model =
     , providedDecoders : Dict.Dict TypeName String
     , providedEncoders : Dict.Dict TypeName String
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
-    , defaultUnionValues : Dict.Dict String Expression
+    , defaultUnionValues : Dict.Dict TypeName Expression
     , generatedDecoders : List (List Statement)
     , generatedEncoders : List (List Statement)
     , config : Config

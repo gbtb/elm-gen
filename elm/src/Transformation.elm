@@ -19,7 +19,7 @@ type alias TransformationContext =
     , knownTypes : Dict.Dict TypeName (List String)
     , makeName : String -> String
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
-    , defaultUnionValues : Dict.Dict String Expression
+    , defaultUnionValues : Dict.Dict TypeName Expression
     }
 
 
@@ -171,7 +171,7 @@ genDecoderForUnionType ctx unionType =
             Application (variable ctx.decoderPrefix "oneOf")
     in
         case unionType of
-            TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
+            TypeDeclaration (TypeConstructor typeName []) constructors ->
                 begin <|
                     List <|
                         addDefaultConstructorDecoder ctx typeName constructors <|

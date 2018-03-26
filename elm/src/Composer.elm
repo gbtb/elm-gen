@@ -26,7 +26,7 @@ type alias GenContext =
     , userDefinedTypes : Dict.Dict TypeName (List String)
     , excludedTypes : TypeSet
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
-    , defaultUnionValues : Dict.Dict String Expression
+    , defaultUnionValues : Dict.Dict TypeName Expression
     , generatorFunc : TransformationContext -> Statement -> List Statement
     , prefix : String
     , makeName : String -> String
