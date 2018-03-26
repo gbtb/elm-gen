@@ -44,8 +44,14 @@ encTcName =
     [ "JE", "Value" ]
 
 
+mappableTypes =
+    List.map TypeName.fromStr [ "List", "Array" ]
+
+
 mappableStubs ctx =
-    Dict.fromList <| List.map (\i -> ( TypeName.fromStr i, genEncoderForMappable ctx i )) [ "List", "Array" ]
+    Dict.fromList <|
+        List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
+            mappableTypes
 
 
 makeFileLoadRequest : Model -> Result String (Dict.Dict (List String) TypeSet)
@@ -58,7 +64,7 @@ makeFileLoadRequest model =
             List.foldl importFoldHelper ( model.unknownTypes, Dict.empty ) imports
     in
         if not <| Set.isEmpty unknownTypes then
-            Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList unknownTypes) ++ "] in import statements!"
+            Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList <| Set.map TypeName.toStr unknownTypes) ++ "] in import statements!"
         else
             Ok <| modulesDict
 
@@ -147,7 +153,7 @@ generate model =
         userDefinedTypesDecoders =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
-                |> setdiff (Set.fromList [ "List", "Array" ])
+                |> setdiff (Set.fromList mappableTypes)
                 |> Set.toList
                 |> makeNameMapping (getNameFunc model.config.decodersName)
                 |> Dict.union (Dict.map (\_ v -> [ v ]) model.providedDecoders)
@@ -170,7 +176,7 @@ generate model =
                         generateDecoders
                             { typesDict = model.typesDict
                             , graph = graph
-                            , userDefinedTypes = (userDefinedTypesDecoders)
+                            , userDefinedTypes = userDefinedTypesDecoders
                             , excludedTypes = (keysSet model.providedDecoders)
                             , defaultRecordValues = model.defaultRecordValues
                             , defaultUnionValues = model.defaultUnionValues
@@ -344,7 +350,6 @@ generateDecodersHelper genContext item =
             )
 
 
-importFoldHelper : Statement -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) ) -> ( Set.Set String, Dict.Dict (List String) (Set.Set String) )
 importFoldHelper importStmt ( unknownTypes, modulesDict ) =
     let
         defaultReturn =
@@ -375,14 +380,14 @@ importFoldHelper importStmt ( unknownTypes, modulesDict ) =
                     Debug.crash "Non-import statement passed to function!"
 
 
-getImportedTypes : ExportSet -> List String
+getImportedTypes : ExportSet -> List TypeName
 getImportedTypes exportSet =
     case exportSet of
         SubsetExport listOfExports ->
             List.foldl (\exp list -> list ++ getImportedTypes exp) [] listOfExports
 
         TypeExport typeName _ ->
-            [ typeName ]
+            [ TypeName.fromStr typeName ]
 
         _ ->
             []
@@ -411,7 +416,7 @@ printImports command importsDict typesDict =
                 extImports1
 
         toExport ts =
-            ts |> Set.toList |> List.map (\name -> TypeExport name (getExportSet typesDict name)) |> SubsetExport |> Just
+            ts |> Set.toList |> List.map (toExportHelper typesDict) |> SubsetExport |> Just
 
         typesImports =
             List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
@@ -419,6 +424,14 @@ printImports command importsDict typesDict =
                     importsDict
     in
         List.map printStatement (extImports2 ++ typesImports)
+
+
+toExportHelper typesDict name =
+    let
+        name_ =
+            name
+    in
+        TypeExport name_ (getExportSet typesDict name_)
 
 
 getExportSet typesDict name =

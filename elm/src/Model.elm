@@ -51,8 +51,8 @@ type alias Model =
     , parsedStatements : List Statement
     , newlyParsedStatements : List Statement
     , unknownTypes : TypeSet
-    , typesDict : Dict.Dict String Statement
-    , dependencies : ( TypeSet, Dict.Dict String TypeSet )
+    , typesDict : Dict.Dict TypeName Statement
+    , dependencies : ( TypeSet, Dict.Dict TypeName TypeSet )
     , importsDict : Dict.Dict (List String) TypeSet
     , moduleDeclaration : Statement
     , providedDecoders : Dict.Dict TypeName String
