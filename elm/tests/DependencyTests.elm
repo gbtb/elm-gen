@@ -10,13 +10,14 @@ import Set
 import Dependency exposing (..)
 import Model exposing (..)
 import Composer exposing (..)
+import TypeName
 
 
 suite : Test
 suite =
     let
         knownTypes =
-            Set.fromList [ "Bool", "Int", "Float", "String", "List", "Array" ]
+            Set.fromList <| List.map TypeName.fromStr [ "Bool", "Int", "Float", "String", "List", "Array" ]
     in
         describe "Dependency:"
             [ describe "can get dependencies from type"
@@ -29,12 +30,12 @@ suite =
                     \_ ->
                         Expect.equal
                             (getDependencies knownTypes <| TypeDeclaration (TypeConstructor [ "Basic" ] []) ([ TypeConstructor [ "Cons1" ] ([ TypeConstructor [ "Type1" ] [] ]), TypeConstructor [ "Cons2" ] ([ TypeTuple ([ TypeConstructor [ "List" ] ([ TypeConstructor [ "Type2" ] [] ]) ]) ]) ]))
-                            (Set.fromList [ "Type1", "Type2" ])
+                            (Set.fromList <| List.map TypeName.fromStr [ "Type1", "Type2" ])
                 , test "can extract dependencies from record type" <|
                     \_ ->
                         Expect.equal
                             (getDependencies knownTypes <| TypeAliasDeclaration (TypeConstructor [ "Record" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "A" ] ([ TypeConstructor [ "B" ] [], TypeConstructor [ "C" ] [] ]) ), ( "field2", TypeConstructor [ "Basic" ] [] ) ])))
-                            (Set.fromList [ "A", "B", "C", "Basic" ])
+                            (Set.fromList <| List.map TypeName.fromStr [ "A", "B", "C", "Basic" ])
                 ]
             , describe "can build dependency graph"
                 [ test "for 2 simple union types" <|
@@ -46,7 +47,9 @@ suite =
                                 , TypeAliasDeclaration (TypeConstructor [ "Record" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "List" ] ([ TypeConstructor [ "Float" ] [] ]) ), ( "field2", TypeConstructor [ "Basic" ] [] ) ]))
                                 ]
                             )
-                            ( Set.fromList [ "Record" ], Dict.fromList [ ( "Record", Set.fromList [ "Basic" ] ), ( "Basic", Set.empty ) ] )
+                            ( Set.fromList <| List.map TypeName.fromStr [ "Record" ]
+                            , Dict.fromList [ ( TypeName.fromStr "Record", Set.fromList <| List.map TypeName.fromStr [ "Basic" ] ), ( TypeName.fromStr "Basic", Set.empty ) ]
+                            )
                 , test "for 3 simple types" <|
                     \_ ->
                         Expect.equal
@@ -57,7 +60,13 @@ suite =
                                 , TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ]))
                                 ]
                             )
-                            ( Set.fromList [ "C" ], Dict.fromList [ ( "B", Set.fromList [ "A" ] ), ( "C", Set.fromList [ "B", "A" ] ), ( "A", Set.empty ) ] )
+                            ( Set.fromList <| List.map TypeName.fromStr [ "C" ]
+                            , Dict.fromList
+                                [ ( TypeName.fromStr "B", Set.fromList <| List.map TypeName.fromStr [ "A" ] )
+                                , ( TypeName.fromStr "C", Set.fromList <| List.map TypeName.fromStr [ "B", "A" ] )
+                                , ( TypeName.fromStr "A", Set.empty )
+                                ]
+                            )
                 , test "for 3 simple types out of dependency order" <|
                     \_ ->
                         Expect.equal
@@ -68,7 +77,13 @@ suite =
                                 , TypeDeclaration (TypeConstructor [ "B" ] []) ([ TypeConstructor [ "B" ] ([ TypeConstructor [ "A" ] [] ]) ])
                                 ]
                             )
-                            ( Set.fromList [ "C" ], Dict.fromList [ ( "B", Set.fromList [ "A" ] ), ( "C", Set.fromList [ "B", "A" ] ), ( "A", Set.empty ) ] )
+                            ( Set.fromList <| List.map TypeName.fromStr [ "C" ]
+                            , Dict.fromList
+                                [ ( TypeName.fromStr "B", Set.fromList <| List.map TypeName.fromStr [ "A" ] )
+                                , ( TypeName.fromStr "C", Set.fromList <| List.map TypeName.fromStr [ "B", "A" ] )
+                                , ( TypeName.fromStr "A", Set.empty )
+                                ]
+                            )
                 ]
             , describe "can resolve dependencies"
                 [ test "in case of load of additional statements" <|
@@ -100,9 +115,9 @@ suite =
                             Expect.all
                                 [ (\m -> Expect.equal m.unknownTypes Set.empty)
                                 , (\m -> Expect.equal m.newlyParsedStatements [])
-                                , (\m -> Expect.equal (Dict.keys m.typesDict) [ "A", "B", "C" ])
-                                , (\m -> Expect.equal (Dict.keys <| Tuple.second m.dependencies) [ "A", "B", "C" ])
-                                , (\m -> Expect.equal (Tuple.first m.dependencies) (Set.fromList [ "C" ]))
+                                , (\m -> Expect.equal (Dict.keys m.typesDict) <| List.map TypeName.fromStr [ "A", "B", "C" ])
+                                , (\m -> Expect.equal (Dict.keys <| Tuple.second m.dependencies) <| List.map TypeName.fromStr [ "A", "B", "C" ])
+                                , (\m -> Expect.equal (Tuple.first m.dependencies) (Set.fromList <| List.map TypeName.fromStr [ "C" ]))
                                 , (\m -> Expect.equal (List.length m.parsedStatements) 5)
                                   --concat new statements as well
                                 ]

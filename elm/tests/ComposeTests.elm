@@ -11,6 +11,7 @@ import Model exposing (..)
 import Dict
 import Set
 import PrintRepr exposing (..)
+import TypeName
 
 
 suite : Test
@@ -42,27 +43,27 @@ suite =
                                 , ImportStatement [ "Rel", "Module3" ] Nothing (Just (SubsetExport ([ TypeExport "Type4" Nothing ])))
                                 , ImportStatement [ "Module4" ] Nothing (Just (AllExport))
                                 ]
-                            , unknownTypes = Set.fromList [ "Type1", "Type2", "Type3", "Type4" ]
+                            , unknownTypes = Set.fromList <| List.map TypeName.fromStr [ "Type1", "Type2", "Type3", "Type4" ]
                          }
                         )
                     )
                     (Ok <|
                         Dict.fromList
-                            [ ( [ "Module1" ], Set.fromList [ "Type1" ] )
-                            , ( [ "Module2" ], Set.fromList [ "Type2", "Type3" ] )
-                            , ( [ "Rel", "Module3" ], Set.fromList [ "Type4" ] )
+                            [ ( [ "Module1" ], Set.fromList <| List.map TypeName.fromStr [ "Type1" ] )
+                            , ( [ "Module2" ], Set.fromList <| List.map TypeName.fromStr [ "Type2", "Type3" ] )
+                            , ( [ "Rel", "Module3" ], Set.fromList <| List.map TypeName.fromStr [ "Type4" ] )
                             ]
                     )
         , test "can extract encoders" <|
             \_ ->
                 Expect.equal
                     (extractEncoder [ "Value" ] <| FunctionTypeDeclaration "listEncoder" (TypeApplication (TypeApplication (TypeVariable "a") (TypeConstructor [ "Value" ] [])) (TypeApplication (TypeConstructor [ "List" ] ([ TypeVariable "a" ])) (TypeConstructor [ "Value" ] []))))
-                    (Just ( "List", "listEncoder" ))
+                    (Just ( TypeName.fromStr "List", "listEncoder" ))
         , test "can extract encoders 2" <|
             \_ ->
                 Expect.equal
                     (extractEncoder [ "Value" ] <| FunctionTypeDeclaration "basicEncoder" (TypeApplication (TypeConstructor [ "Basic" ] []) (TypeConstructor [ "Value" ] [])))
-                    (Just ( "Basic", "basicEncoder" ))
+                    (Just ( TypeName.fromStr "Basic", "basicEncoder" ))
         , test "prints correct default packages import for decoders only" <|
             \_ ->
                 Expect.equal
