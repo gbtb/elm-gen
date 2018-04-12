@@ -14,10 +14,10 @@ import Set
 import Dict
 import Utils exposing (..)
 import Model exposing (..)
-import Config exposing (..)
 import StatementFilters exposing (..)
 import ReadConfig exposing (..)
 import TypeName
+import Imports exposing (importFoldHelper, getTypes)
 
 
 type alias GenContext =
@@ -66,7 +66,7 @@ makeFileLoadRequest model =
         if not <| Set.isEmpty unknownTypes then
             Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList <| Set.map TypeName.toStr unknownTypes) ++ "] in import statements!"
         else
-            Ok <| modulesDict
+            Ok <| Debug.log "modules" modulesDict
 
 
 {-| This function is designed to handle additional loading of type definitions came through fileLoadRequest
@@ -120,17 +120,12 @@ resolveDependencies model =
         ( graphHeads, graph ) =
             ( Set.union newGraphHeads oldGraphHeads, Dict.union oldGraph newGraph )
 
-        userDefinedTypes =
+        usedTypes =
             Dict.values graph
                 |> List.foldl Set.union Set.empty
 
         unknownTypes =
-            Set.diff (userDefinedTypes) (Set.fromList <| Dict.keys typesDict)
-                |> (\s ->
-                        Set.diff s <|
-                            Set.fromList <|
-                                List.map TypeName.fromStr [ "Maybe", "List", "Array" ]
-                   )
+            getUnknownTypes (getWideImports statements) usedTypes (keysSet typesDict)
     in
         { model
             | typesDict = typesDict
@@ -143,6 +138,21 @@ resolveDependencies model =
                 Dict.union importsDict model.importsDict
             , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
         }
+
+
+{-| This func calculates unknown types from types used (userDefinedTypes) minus defined types in type-def dict,
+    minus those types that *could* be imported from wide imports (aka Import Dict)
+-}
+getUnknownTypes wideImports usedTypes definedTypes =
+    let
+        parsedTypes =
+            Set.diff (Debug.log "types" <| usedTypes) definedTypes
+
+        hardcodedTypes =
+            Set.fromList <|
+                List.map TypeName.fromStr [ "Maybe", "List", "Array" ]
+    in
+        Set.diff parsedTypes hardcodedTypes |> Set.filter (\t -> not <| Set.member (TypeName.getNamespace t) wideImports)
 
 
 generate : Model -> Model
@@ -266,41 +276,6 @@ printDecoders decoders =
         List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
-getTypes : GenCommand -> Dict.Dict TypeName String -> Dict.Dict TypeName String -> Set.Set TypeName -> List Statement -> List TypeName
-getTypes genCommand decoders encoders unknownTypes lst =
-    List.sort <|
-        List.concat <|
-            List.filterMap
-                (\s ->
-                    extractType s
-                        |> Maybe.map
-                            (\( consName, _ ) ->
-                                let
-                                    decoder =
-                                        Dict.get consName decoders
-
-                                    encoder =
-                                        Dict.get consName encoders
-
-                                    typeItself =
-                                        if
-                                            (Maybe.isNothing decoder && willGenDecoder genCommand)
-                                                || (Maybe.isNothing encoder && willGenEncoder genCommand)
-                                        then
-                                            (if Set.member consName unknownTypes then
-                                                Nothing
-                                             else
-                                                Just consName
-                                            )
-                                        else
-                                            Nothing
-                                in
-                                    List.filterMap identity [ Maybe.map TypeName.fromStr decoder, Maybe.map TypeName.fromStr encoder, typeItself ]
-                            )
-                )
-                lst
-
-
 makeTypesDict types =
     List.foldl (\item accumDict -> Dict.insert (getTypeNameFromStatement item) item accumDict) Dict.empty types
 
@@ -352,36 +327,6 @@ generateDecodersHelper genContext item =
                         Nothing ->
                             Debug.crash ("Type not found in types dict! " ++ (TypeName.toStr item) ++ (toString genContext.mappableStubs))
             )
-
-
-importFoldHelper importStmt ( unknownTypes, modulesDict ) =
-    let
-        defaultReturn =
-            ( unknownTypes, modulesDict )
-    in
-        if Set.isEmpty unknownTypes then
-            defaultReturn
-        else
-            case importStmt of
-                ImportStatement moduleName _ mbExportSet ->
-                    case mbExportSet of
-                        Just exportSet ->
-                            let
-                                importedTypes =
-                                    Set.fromList <| getImportedTypes exportSet
-                            in
-                                if not <| Set.isEmpty <| Set.intersect importedTypes unknownTypes then
-                                    ( Set.diff unknownTypes importedTypes
-                                    , Dict.insert moduleName (Set.intersect unknownTypes importedTypes) modulesDict
-                                    )
-                                else
-                                    defaultReturn
-
-                        Nothing ->
-                            defaultReturn
-
-                _ ->
-                    Debug.crash "Non-import statement passed to function!"
 
 
 getImportedTypes : ExportSet -> List TypeName

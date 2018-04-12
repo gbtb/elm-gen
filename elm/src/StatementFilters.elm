@@ -5,6 +5,7 @@ import Ast.Expression exposing (..)
 import Regex
 import Model exposing (MetaComment(..), TypeName)
 import TypeName
+import Maybe.Extra as Maybe
 
 
 asFilter : Maybe a -> Bool
@@ -45,6 +46,15 @@ extractImport s =
     case s of
         ImportStatement moduleName _ mbExportSet ->
             Just ( moduleName, mbExportSet )
+
+        _ ->
+            Nothing
+
+
+extractImportedModuleName s =
+    case s of
+        ImportStatement moduleName alias_ mbExportSet ->
+            Just <| Maybe.withDefault alias_ moduleName
 
         _ ->
             Nothing

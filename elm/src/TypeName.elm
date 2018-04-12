@@ -48,3 +48,15 @@ toLowerCaseName l =
 
 getDecoderName typeName makeName =
     makeName <| toLowerCaseName typeName
+
+
+getNamespace typeName =
+    case typeName of
+        [] ->
+            ""
+
+        [ a ] ->
+            ""
+
+        h :: cons ->
+            h

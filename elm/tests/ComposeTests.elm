@@ -79,4 +79,19 @@ suite =
                 Expect.equal
                     (printImports Encoders Dict.empty Dict.empty)
                     ([ Line 0 "import Json.Encode as JE" ])
+        , test "gets unknown types correctly accounting for wide imports" <|
+            \_ ->
+                let
+                    wideImportedModules =
+                        Set.fromList [ "Dict" ]
+
+                    usedTypes =
+                        Set.fromList [ [ "Dict", "Dict" ], TypeName.fromStr "A" ]
+
+                    definedTypes =
+                        Set.fromList [ TypeName.fromStr "A" ]
+                in
+                    Expect.equal
+                        (getUnknownTypes wideImportedModules usedTypes definedTypes)
+                        (Set.empty)
         ]
