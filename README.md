@@ -15,4 +15,4 @@ For now, there are 3 meta-comments:
 * DefaultValue -- use next pair of (value type def, value expr) to produce default value for `Json.Decode.Pipeline.optional` function.
 Supports values of types `defaultValue: UnionType` for union types, and `defaultValue : Record ` or `defaultValue : Record -> Record` for record types.
 
-* NoDeclaration -- elm-gen don't generates type declaration for next type's decoder (usefull for preserving record structural typing ability for generated decoder )
+* NoDeclaration -- elm-gen won't generates type declaration for next type's decoder (usefull for preserving record structural typing ability for generated decoder )

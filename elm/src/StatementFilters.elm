@@ -126,6 +126,8 @@ extractMetaComment s =
                 Just Ignore
             else if Regex.contains (Regex.regex "//DefaultValue") str then
                 Just DefaultValue
+            else if Regex.contains (Regex.regex "//NoDeclaration") str then
+                Just NoDeclaration
             else
                 Nothing
 

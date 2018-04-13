@@ -20,11 +20,12 @@ type alias TransformationContext =
     , makeName : String -> String
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict TypeName Expression
+    , dontDeclareTypes : Set.Set TypeName
     }
 
 
 defaultContext isDecoders =
-    initContext isDecoders "JD" defaultDecoderNameFunc Dict.empty
+    initContext isDecoders "JD" defaultDecoderNameFunc Dict.empty Dict.empty Set.empty
 
 
 knownTypesForDecoders prefix =
@@ -41,7 +42,7 @@ knownTypesForEncoders prefix nameFunc =
         |> Dict.fromList
 
 
-initContext isDecoders prefix nameFunc userDefinedTypes d1 d2 =
+initContext isDecoders prefix nameFunc userDefinedTypes d1 d2 s =
     { decoderPrefix = prefix
     , assumeUnionTypeDefaultConstructor = False
     , knownTypes =
@@ -54,6 +55,7 @@ initContext isDecoders prefix nameFunc userDefinedTypes d1 d2 =
     , makeName = nameFunc
     , defaultRecordValues = d1
     , defaultUnionValues = d2
+    , dontDeclareTypes = s
     }
 
 
@@ -64,40 +66,40 @@ genDecoder context stmt =
             let
                 typeName =
                     getTypeName leftPart
-
-                decoderName =
-                    TypeName.getDecoderName typeName context.makeName
-
-                decoderType =
-                    if String.length context.decoderPrefix > 0 then
-                        [ context.decoderPrefix, "Decoder" ]
-                    else
-                        [ "Decoder" ]
             in
-                [ FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
-                , FunctionDeclaration (decoderName) [] <| genDecoderForRecord context typeName rightPart
-                ]
+                genDecoderHelper context leftPart rightPart (genDecoderForRecord context typeName rightPart)
 
         TypeDeclaration leftPart rightPart ->
-            let
-                typeName =
-                    getTypeName leftPart
-
-                decoderName =
-                    TypeName.getDecoderName typeName context.makeName
-
-                decoderType =
-                    if String.length context.decoderPrefix > 0 then
-                        [ context.decoderPrefix, "Decoder" ]
-                    else
-                        [ "Decoder" ]
-            in
-                [ FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
-                , FunctionDeclaration (decoderName) [] <| genDecoderForUnionType context stmt
-                ]
+            genDecoderHelper context leftPart rightPart (genDecoderForUnionType context stmt)
 
         _ ->
             Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
+
+
+genDecoderHelper context leftPart rightPart generatorInvocation =
+    let
+        typeName =
+            getTypeName leftPart
+
+        decoderName =
+            TypeName.getDecoderName typeName context.makeName
+
+        decoderType =
+            if String.length context.decoderPrefix > 0 then
+                [ context.decoderPrefix, "Decoder" ]
+            else
+                [ "Decoder" ]
+
+        decoderDeclaration =
+            FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
+
+        decoderBody =
+            FunctionDeclaration (decoderName) [] <| generatorInvocation
+    in
+        if Set.member typeName context.dontDeclareTypes then
+            List.singleton decoderBody
+        else
+            [ decoderDeclaration, decoderBody ]
 
 
 genEncoder : TransformationContext -> Statement -> List Statement
@@ -107,40 +109,40 @@ genEncoder context stmt =
             let
                 typeName =
                     getTypeName leftPart
-
-                decoderName =
-                    TypeName.getDecoderName typeName context.makeName
-
-                encoderType =
-                    if String.length context.decoderPrefix > 0 then
-                        [ context.decoderPrefix, "Value" ]
-                    else
-                        [ "Value" ]
             in
-                [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
-                , FunctionDeclaration (decoderName) [ variable "" "value" ] <| genEncoderForRecord context typeName rightPart
-                ]
+                genEncoderHelper context leftPart rightPart (genEncoderForRecord context typeName rightPart)
 
         TypeDeclaration leftPart rightPart ->
-            let
-                typeName =
-                    getTypeName leftPart
-
-                decoderName =
-                    TypeName.getDecoderName typeName context.makeName
-
-                encoderType =
-                    if String.length context.decoderPrefix > 0 then
-                        [ context.decoderPrefix, "Value" ]
-                    else
-                        [ "Value" ]
-            in
-                [ FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
-                , FunctionDeclaration (decoderName) [ variable "" "value" ] <| genEncoderForUnionType context stmt
-                ]
+            genEncoderHelper context leftPart rightPart (genEncoderForUnionType context stmt)
 
         _ ->
             Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
+
+
+genEncoderHelper context leftPart rightPart generatorInvocation =
+    let
+        typeName =
+            getTypeName leftPart
+
+        decoderName =
+            TypeName.getDecoderName typeName context.makeName
+
+        encoderType =
+            if String.length context.decoderPrefix > 0 then
+                [ context.decoderPrefix, "Value" ]
+            else
+                [ "Value" ]
+
+        encoderDeclaration =
+            FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
+
+        encoderBody =
+            FunctionDeclaration (decoderName) [ variable "" "value" ] <| generatorInvocation
+    in
+        if Set.member typeName context.dontDeclareTypes then
+            List.singleton encoderBody
+        else
+            [ encoderDeclaration, encoderBody ]
 
 
 qualifiedName prefix name =

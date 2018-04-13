@@ -27,6 +27,7 @@ type alias GenContext =
     , excludedTypes : TypeSet
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict TypeName Expression
+    , dontDeclareTypes : Set.Set TypeName
     , generatorFunc : TransformationContext -> Statement -> List Statement
     , prefix : String
     , makeName : String -> String
@@ -198,6 +199,7 @@ generate model =
                             , excludedTypes = (keysSet model.providedDecoders)
                             , defaultRecordValues = model.defaultRecordValues
                             , defaultUnionValues = model.defaultUnionValues
+                            , dontDeclareTypes = model.dontDeclareTypes
                             , generatorFunc = genDecoder
                             , prefix = "JD"
                             , makeName = nameFunc
@@ -221,6 +223,7 @@ generate model =
                             , excludedTypes = (keysSet model.providedEncoders)
                             , defaultRecordValues = model.defaultRecordValues
                             , defaultUnionValues = model.defaultUnionValues
+                            , dontDeclareTypes = model.dontDeclareTypes
                             , generatorFunc = genEncoder
                             , prefix = "JE"
                             , makeName = nameFunc
@@ -325,6 +328,7 @@ generateDecodersHelper genContext item =
                                         genContext.userDefinedTypes
                                         genContext.defaultRecordValues
                                         genContext.defaultUnionValues
+                                        genContext.dontDeclareTypes
                                     )
                                     stmt
 

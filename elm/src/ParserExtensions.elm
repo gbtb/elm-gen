@@ -6,6 +6,7 @@ import StatementFilters exposing (extractMetaComment, extractType, asFilter, ext
 import Model exposing (MetaComment(..), TypeName)
 import Maybe.Extra as Maybe
 import Dict
+import Set
 
 
 applyMetaComments :
@@ -13,6 +14,7 @@ applyMetaComments :
     -> { statements : List Statement
        , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
        , defaultUnionValues : Dict.Dict TypeName Expression
+       , dontDeclareTypes : Set.Set TypeName
        }
 applyMetaComments stmnts =
     let
@@ -22,6 +24,7 @@ applyMetaComments stmnts =
         { statements = List.reverse foldResult.statements
         , defaultRecordValues = foldResult.defaultRecordValues
         , defaultUnionValues = foldResult.defaultUnionValues
+        , dontDeclareTypes = foldResult.dontDeclareTypes
         }
 
 
@@ -30,6 +33,7 @@ type alias FoldHelper =
     , typeName : Maybe TypeName
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict TypeName Expression
+    , dontDeclareTypes : Set.Set TypeName
     , statements : List Statement
     }
 
@@ -39,6 +43,7 @@ initFoldHelper =
     , typeName = Nothing
     , defaultRecordValues = Dict.empty
     , defaultUnionValues = Dict.empty
+    , dontDeclareTypes = Set.empty
     , statements = []
     }
 
@@ -65,6 +70,13 @@ foldHelper item accum =
                 Just meta ->
                     if (asFilter <| extractType item) && meta == Ignore then
                         f1
+                    else if meta == NoDeclaration then
+                        case extractType item of
+                            Just ( typeName, _ ) ->
+                                { f2 | dontDeclareTypes = Set.insert typeName f2.dontDeclareTypes }
+
+                            Nothing ->
+                                f2
                     else if meta == DefaultValue then
                         case accum.typeName of
                             Nothing ->

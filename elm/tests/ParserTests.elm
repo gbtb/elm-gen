@@ -34,6 +34,7 @@ suite =
                         ]
                     , defaultRecordValues = Dict.empty
                     , defaultUnionValues = Dict.empty
+                    , dontDeclareTypes = Set.empty
                     }
         , test
             "extracts default union type values"

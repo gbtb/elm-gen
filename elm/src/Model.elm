@@ -59,6 +59,7 @@ type alias Model =
     , providedEncoders : Dict.Dict TypeName String
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict TypeName Expression
+    , dontDeclareTypes : Set.Set TypeName
     , generatedDecoders : List (List Statement)
     , generatedEncoders : List (List Statement)
     , config : Config
@@ -81,6 +82,7 @@ initModel =
     , providedEncoders = Dict.empty
     , defaultRecordValues = Dict.empty
     , defaultUnionValues = Dict.empty
+    , dontDeclareTypes = Set.empty
     , generatedDecoders = []
     , generatedEncoders = []
     , config = initConfig

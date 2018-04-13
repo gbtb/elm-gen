@@ -126,6 +126,7 @@ updateInitialParse model parsedStatements fileNames rootDir genCommand =
             , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
             , defaultUnionValues =
                 Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+            , dontDeclareTypes = Set.union model.dontDeclareTypes metaParseResult.dontDeclareTypes
             , config = updatedConfig
           }
         , Cmd.batch [ logMessage "Parsing files...", makeCmd ResolveDependencies ]
@@ -149,6 +150,7 @@ updateAdditionalParse model parsedStatements fileNames genCommand =
             | newlyParsedStatements = metaParseResult.statements
             , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
             , defaultUnionValues = Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+            , dontDeclareTypes = Set.union model.dontDeclareTypes metaParseResult.dontDeclareTypes
           }
         , Cmd.batch [ logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
         )

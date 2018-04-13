@@ -20,3 +20,11 @@ type alias R =
 type C
     = Cons1 Int
     | Cons2 String Int Float
+
+
+{-| //NoDeclaration
+-}
+type alias D =
+    { foo : Int
+    , bar : C
+    }
