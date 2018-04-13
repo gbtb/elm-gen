@@ -66,7 +66,7 @@ makeFileLoadRequest model =
         if not <| Set.isEmpty unknownTypes then
             Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList <| Set.map TypeName.toStr unknownTypes) ++ "] in import statements!"
         else
-            Ok <| Debug.log "modules" modulesDict
+            Ok <| Dict.filter (\_ s -> s |> Set.isEmpty |> not) modulesDict
 
 
 {-| This function is designed to handle additional loading of type definitions came through fileLoadRequest
@@ -146,7 +146,7 @@ resolveDependencies model =
 getUnknownTypes wideImports usedTypes definedTypes =
     let
         parsedTypes =
-            Set.diff (Debug.log "types" <| usedTypes) definedTypes
+            Set.diff usedTypes definedTypes
 
         hardcodedTypes =
             Set.fromList <|

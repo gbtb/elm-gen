@@ -44,7 +44,7 @@ filterOutConcreteTypesImports unknownTypes exportSet moduleName modulesDict =
             Set.fromList <| getImportedTypes exportSet
     in
         ( Set.diff unknownTypes importedTypes
-        , Debug.log "concrete" <| Dict.insert moduleName (Set.intersect unknownTypes importedTypes) modulesDict
+        , Dict.insert moduleName (Set.intersect unknownTypes importedTypes) modulesDict
         )
 
 
@@ -56,7 +56,7 @@ filterOutGeneralImports moduleName ( unknownTypes, modulesDict ) =
         if Set.size importedTypes == 0 then
             ( unknownTypes, modulesDict )
         else
-            ( unknownTypes_, Debug.log "gen" <| Dict.update moduleName (updater importedTypes) modulesDict )
+            ( unknownTypes_, Dict.update moduleName (updater importedTypes) modulesDict )
 
 
 updater new contained =
@@ -108,8 +108,7 @@ printImports command importsDict typesDict =
 
         typesImports =
             List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
-                Dict.toList <|
-                    Debug.log "i" importsDict
+                Dict.toList importsDict
     in
         List.map printStatement (extImports2 ++ typesImports)
 
@@ -153,7 +152,7 @@ getTypes genCommand decoders encoders unknownTypes lst =
                                 (\( consName, _ ) ->
                                     let
                                         decoder =
-                                            Debug.log "dec" <| Dict.get (Debug.log "cons" consName) decoders
+                                            Dict.get consName decoders
 
                                         encoder =
                                             Dict.get consName encoders
