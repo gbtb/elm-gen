@@ -1,4 +1,4 @@
-[](https://travis-ci.org/gbtb/elm-gen.svg?branch=master)
+![](https://travis-ci.org/gbtb/elm-gen.svg?branch=master)
 # elm-gen
 Experimental CLI tool for generating Elm JSON Decoders and Encoders, written mostly in Elm. 
 Based on top of [elm-ast](https://github.com/Bogdanp/elm-ast) parsing library.
