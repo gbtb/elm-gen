@@ -83,7 +83,7 @@ suite =
             \_ ->
                 let
                     wideImportedModules =
-                        Set.fromList [ "Dict" ]
+                        [ Just [ "Dict" ] ]
 
                     usedTypes =
                         Set.fromList [ [ "Dict", "Dict" ], TypeName.fromStr "A" ]

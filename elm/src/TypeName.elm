@@ -2,6 +2,7 @@ module TypeName exposing (..)
 
 import Model exposing (TypeName)
 import Char
+import List.Extra as List
 
 
 fromStr : String -> TypeName
@@ -51,12 +52,4 @@ getDecoderName typeName makeName =
 
 
 getNamespace typeName =
-    case typeName of
-        [] ->
-            ""
-
-        [ a ] ->
-            ""
-
-        h :: cons ->
-            h
+    List.init typeName

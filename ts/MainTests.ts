@@ -20,18 +20,6 @@ function dataPath(filename: string){
   return path.join(dataDir, filename);
 }
 
-it('can use provided decoders for imported types' , () => {
-  shell.cd('./dist');
-  shell.exec("./elm-gen d ../tests_data/WithDecoder2.elm .");
-  expect(
-    readFile(outPath("WithDecoder2Decoders.elm"))
-  ).to.equal(
-    readFile(dataPath("WithDecoder2Decoders.elm"))
-  );
-});
-
-/*
-
 describe('Elm-gen by default produces decoder and encoders', () => {
   it('yells if no arguments provided' , () => {
     const ret = shell.exec("./dist/elm-gen");
@@ -221,5 +209,13 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
-})
-*/
+  it('can use provided decoders for imported types' , () => {
+    shell.exec("./elm-gen d ../tests_data/WithDecoder2.elm .");
+    expect(
+      readFile(outPath("WithDecoder2Decoders.elm"))
+    ).to.equal(
+      readFile(dataPath("WithDecoder2Decoders.elm"))
+    );
+  });
+
+});

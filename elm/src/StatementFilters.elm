@@ -54,7 +54,7 @@ extractImport s =
 extractImportedModuleName s =
     case s of
         ImportStatement moduleName alias_ mbExportSet ->
-            Just <| Maybe.withDefault alias_ moduleName
+            alias_ |> Maybe.map List.singleton |> Maybe.withDefault moduleName |> Just
 
         _ ->
             Nothing

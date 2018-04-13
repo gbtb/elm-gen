@@ -1,10 +1,14 @@
-module WithDecoderDecoders exposing (..)
+module WithDecoder2Decoders exposing (..)
 
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
-import WithDecoder exposing (R(..), aDecoder)
+import WithDecoder exposing (A(..), dictDecoder)
 
 
-rDecoder : JD.Decoder R
-rDecoder =
-    JD.oneOf [ JD.field "Cons1" (JD.map Cons1 aDecoder) ]
+aDecoder : JD.Decoder A
+aDecoder =
+    JD.oneOf
+        [ JD.field "Foo" (JD.map Foo dictDecoder)
+        , JD.field "Bar" (JD.succeed Bar)
+        , JD.field "Baz" (JD.succeed Baz)
+        ]

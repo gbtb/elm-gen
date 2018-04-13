@@ -152,7 +152,11 @@ getUnknownTypes wideImports usedTypes definedTypes =
             Set.fromList <|
                 List.map TypeName.fromStr [ "Maybe", "List", "Array" ]
     in
-        Set.diff parsedTypes hardcodedTypes |> Set.filter (\t -> not <| Set.member (TypeName.getNamespace t) wideImports)
+        Set.diff parsedTypes hardcodedTypes |> Set.filter (\t -> not <| List.member (TypeName.getNamespace t) wideImports)
+
+
+getWideImports statements =
+    List.filterMap extractImportedModuleName statements |> List.map Just
 
 
 generate : Model -> Model
