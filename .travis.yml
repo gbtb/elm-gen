@@ -48,5 +48,5 @@ deploy:
   api_key: $NPM_API_KEY
   on:
     branch: master
-  tag: next
+  tag: latest
   skip_cleanup: true
