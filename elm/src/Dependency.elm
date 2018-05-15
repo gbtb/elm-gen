@@ -34,7 +34,7 @@ makeDependencyGraph nonHeads knownTypes statements =
 graphHelper knownTypes stmt ( nonHeads, graph ) =
     let
         retrievedDeps =
-            getDependencies knownTypes stmt
+            Debug.log "deps" <| getDependencies knownTypes stmt
     in
         case stmt of
             TypeDeclaration typeName _ ->

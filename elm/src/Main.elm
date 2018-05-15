@@ -63,7 +63,7 @@ update msg model =
         ResolveDependencies ->
             let
                 new_model =
-                    resolveDependencies model
+                    resolveDependencies (Debug.log "model" model)
 
                 imports =
                     List.filter (extractImport >> asFilter) model.parsedStatements

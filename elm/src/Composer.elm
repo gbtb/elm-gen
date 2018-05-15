@@ -4,7 +4,9 @@ import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
-import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder, genMaybeEncoder, TransformationContext, genEncoder, genEncoderForMappable)
+import Transformation.Decoders exposing (genDecoderForTypeAlias, genDecoder, genMaybeDecoder)
+import Transformation.Encoders exposing (genEncoder, genEncoderForMappable, genMaybeEncoder)
+import Transformation.Shared exposing (TransformationContext, defaultContext)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
@@ -167,7 +169,7 @@ generate model =
             List.find (extractModuleDeclaration >> asFilter) model.parsedStatements |> fromJust "Cannot find module declaration!"
 
         ( graphHeads, graph ) =
-            model.dependencies
+            Debug.log "d" model.dependencies
 
         userDefinedTypesDecoders =
             Dict.values graph
@@ -321,7 +323,7 @@ generateDecodersHelper genContext item =
                         Just stmt ->
                             Just <|
                                 genContext.generatorFunc
-                                    (Transformation.initContext
+                                    (Transformation.Shared.initContext
                                         genContext.isDecoders
                                         genContext.prefix
                                         genContext.makeName

@@ -23,6 +23,9 @@ extractType s =
         TypeAliasDeclaration (TypeConstructor typeName []) (TypeRecord r) ->
             Just ( typeName, False )
 
+        TypeAliasDeclaration (TypeConstructor typeName []) (TypeConstructor _ _) ->
+            Just ( typeName, True )
+
         TypeDeclaration (TypeConstructor typeName []) _ ->
             Just ( typeName, True )
 
