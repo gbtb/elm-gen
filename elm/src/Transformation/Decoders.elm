@@ -151,8 +151,9 @@ genDecoderForTypeAlias ctx typeName recordAst =
                         Debug.crash "Too much fields"
 
             TypeConstructor _ _ ->
-                genDecoderForUnionTypeConstructor ctx recordAst
+                decodeType ctx recordAst
 
+            --genDecoderForUnionTypeConstructor ctx recordAst
             _ ->
                 Debug.crash "It is not a record!"
 

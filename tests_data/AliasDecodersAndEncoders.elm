@@ -1,5 +1,16 @@
-module Alias exposing (..)
+module AliasDecodersAndEncoders exposing (..)
+
+import Json.Decode as JD
+import Json.Decode.Pipeline as JD
+import Json.Encode as JE
+import Alias exposing (Tasks)
 
 
-type alias Tasks =
-    List Int
+tasksDecoder : JD.Decoder Tasks
+tasksDecoder =
+    JD.list JD.int
+
+
+tasksEncoder : Tasks -> JE.Value
+tasksEncoder value =
+    listEncoder JE.int

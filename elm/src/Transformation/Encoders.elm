@@ -127,7 +127,7 @@ genEncoderForRecord ctx typeName recordAst =
                 Application (Variable <| qualifiedName ctx.decoderPrefix "object") (List <| List.map (encodeRecordField ctx) l)
 
             TypeConstructor _ _ ->
-                Case (variable "" "value") <| List.singleton <| genEncoderForUnionTypeConstructor ctx recordAst
+                encodeType ctx recordAst
 
             _ ->
                 Debug.crash "It is not a record!"
