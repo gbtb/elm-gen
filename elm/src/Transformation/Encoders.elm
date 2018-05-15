@@ -12,6 +12,7 @@ import ReadConfig exposing (..)
 import Model exposing (TypeName)
 import TypeName
 import Transformation.Shared exposing (..)
+import Config exposing (getEncodePrefix)
 
 
 genEncoder : TransformationContext -> Statement -> List Statement
@@ -176,14 +177,14 @@ encodeKnownTypeConstructor ctx typeName argsTypes =
                 List.foldl (\item accum -> Application accum (encodeType ctx item)) firstType l
 
 
-genMaybeEncoder nameFunc =
+genMaybeEncoder conf nameFunc =
     FunctionDeclaration (nameFunc "maybe")
         ([ Variable [ "valueEncoder" ], Variable [ "value" ] ])
         (Case (Variable [ "value" ])
             ([ ( Application (Variable [ "Just" ]) (Variable [ "value" ])
                , Application (Variable [ "valueEncoder" ]) (Variable [ "value" ])
                )
-             , ( Variable [ "Nothing" ], Access (Variable [ "JE" ]) [ "null" ] )
+             , ( Variable [ "Nothing" ], Access (Variable [ getEncodePrefix conf ]) [ "null" ] )
              ]
             )
         )

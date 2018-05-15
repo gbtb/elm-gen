@@ -6,7 +6,7 @@ import Ast exposing (..)
 import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
-import Config exposing (NameModification, UnionTypeGeneratorFeature(..), ProvidedNameModification(..))
+import Config exposing (NameModification, UnionTypeGeneratorFeature(..), ProvidedNameModification(..), JsonModulesImports)
 
 
 type GenCommand
@@ -94,6 +94,7 @@ type alias Config =
     , encodersName : NameModification
     , decodersName : NameModification
     , outputFileName : NameModification
+    , jsonModulesImports : JsonModulesImports
     , unionTypeGeneratorFeatures : List UnionTypeGeneratorFeature
     }
 
@@ -106,5 +107,9 @@ initConfig =
     , encodersName = { prefix = "", suffix = "Encoder", providedName = DontTouch }
     , decodersName = { prefix = "", suffix = "Decoder", providedName = DontTouch }
     , outputFileName = { prefix = "", suffix = "", providedName = DontTouch }
+    , jsonModulesImports =
+        { decode = Replace "JD"
+        , encode = Replace "JE"
+        }
     , unionTypeGeneratorFeatures = []
     }
