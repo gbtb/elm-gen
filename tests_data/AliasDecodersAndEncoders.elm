@@ -11,6 +11,12 @@ tasksDecoder =
     JD.list JD.int
 
 
+listEncoder : (a -> JE.Value) -> List a -> JE.Value
+listEncoder encoder value =
+    JE.list <|
+        List.map encoder value
+
+
 tasksEncoder : Tasks -> JE.Value
 tasksEncoder value =
-    listEncoder JE.int
+    listEncoder JE.int value

@@ -24,7 +24,7 @@ extractType s =
             Just ( typeName, False )
 
         TypeAliasDeclaration (TypeConstructor typeName []) (TypeConstructor _ _) ->
-            Just ( typeName, True )
+            Just ( typeName, False )
 
         TypeDeclaration (TypeConstructor typeName []) _ ->
             Just ( typeName, True )
