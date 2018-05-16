@@ -1,12 +1,10 @@
 module Composer exposing (..)
 
-import Ast exposing (..)
-import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
-import Transformation.Decoders exposing (genDecoderForTypeAlias, genDecoder, genMaybeDecoder)
+import Transformation.Decoders exposing (genDecoder, genMaybeDecoder)
 import Transformation.Encoders exposing (genEncoder, genEncoderForMappable, genMaybeEncoder)
-import Transformation.Shared exposing (TransformationContext, defaultContext)
+import Transformation.Shared exposing (TransformationContext)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
@@ -39,34 +37,6 @@ type alias GenContext =
     , maybeStub : Statement
     , mappableStubs : Dict.Dict TypeName (List Statement)
     }
-
-
-decTcName conf =
-    case conf of
-        DontTouch ->
-            [ "Json", "Decode", "Decoder" ]
-
-        Replace str ->
-            [ str, "Decoder" ]
-
-
-encTcName conf =
-    case conf of
-        DontTouch ->
-            [ "Json", "Encode", "Decoder" ]
-
-        Replace str ->
-            [ str, "Value" ]
-
-
-mappableTypes =
-    List.map TypeName.fromStr [ "List", "Array" ]
-
-
-mappableStubs ctx =
-    Dict.fromList <|
-        List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
-            mappableTypes
 
 
 makeFileLoadRequest : Model -> Result String (Dict.Dict (List String) TypeSet)
@@ -181,7 +151,7 @@ generate model =
             List.find (extractModuleDeclaration >> asFilter) model.parsedStatements |> fromJust "Cannot find module declaration!"
 
         ( graphHeads, graph ) =
-            Debug.log "d" model.dependencies
+            model.dependencies
 
         userDefinedTypesDecoders =
             Dict.values graph
@@ -218,7 +188,7 @@ generate model =
                             , prefix = getDecodePrefix model.config.jsonModulesImports.decode
                             , makeName = nameFunc
                             , isDecoders = True
-                            , maybeStub = (genMaybeDecoder nameFunc)
+                            , maybeStub = (genMaybeDecoder model.config.jsonModulesImports.decode nameFunc)
                             , mappableStubs = Dict.empty
                             }
                             graphHeads
@@ -366,3 +336,31 @@ getImportedTypes exportSet =
 
 emptyLine =
     Line 0 ""
+
+
+decTcName conf =
+    case conf of
+        DontTouch ->
+            [ "Json", "Decode", "Decoder" ]
+
+        Replace str ->
+            [ str, "Decoder" ]
+
+
+encTcName conf =
+    case conf of
+        DontTouch ->
+            [ "Json", "Encode", "Decoder" ]
+
+        Replace str ->
+            [ str, "Value" ]
+
+
+mappableTypes =
+    List.map TypeName.fromStr [ "List", "Array" ]
+
+
+mappableStubs ctx =
+    Dict.fromList <|
+        List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
+            mappableTypes

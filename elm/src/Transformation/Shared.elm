@@ -21,10 +21,6 @@ type alias TransformationContext =
     }
 
 
-defaultContext isDecoders =
-    initContext isDecoders "JD" defaultDecoderNameFunc Dict.empty Dict.empty Set.empty
-
-
 qualifiedName prefix name =
     if String.length prefix > 0 then
         [ prefix, name ]

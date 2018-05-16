@@ -12,6 +12,7 @@ import ReadConfig exposing (..)
 import Model exposing (TypeName)
 import TypeName
 import Transformation.Shared exposing (..)
+import Config exposing (getDecodePrefix)
 
 
 genDecoder : TransformationContext -> Statement -> List Statement
@@ -201,14 +202,14 @@ decodeType ctx type_ =
             Debug.crash "Not allowed type in recordField"
 
 
-genMaybeDecoder nameFunc =
+genMaybeDecoder conf nameFunc =
     FunctionDeclaration (nameFunc "maybe")
         ([ Variable [ "decoder" ] ])
         (Application
-            (Access (Variable [ "JD" ]) [ "oneOf" ])
+            (Access (Variable [ getDecodePrefix conf ]) [ "oneOf" ])
             (List
-                ([ Application (Access (Variable [ "JD" ]) [ "null" ]) (Variable [ "Nothing" ])
-                 , Application (Application (Access (Variable [ "JD" ]) [ "map" ]) (Variable [ "Just" ])) (Variable [ "decoder" ])
+                ([ Application (Access (Variable [ getDecodePrefix conf ]) [ "null" ]) (Variable [ "Nothing" ])
+                 , Application (Application (Access (Variable [ getDecodePrefix conf ]) [ "map" ]) (Variable [ "Just" ])) (Variable [ "decoder" ])
                  ]
                 )
             )

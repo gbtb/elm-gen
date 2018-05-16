@@ -8,7 +8,7 @@ Based on top of [elm-ast](https://github.com/Bogdanp/elm-ast) parsing library.
 Also look at functional tests in ts/MainTests.ts and correspondent files in tests_data folder.
 
 ### Config
-Some configuration (mostly about naming) can be applied from config json-file. Example of it can be found in tests_data folder.
+Some configuration (mostly about naming) can be applied from config json-file. Example of config can be found in tests_data folder.
 It's correspondent Elm type representation resides in Config.elm
 
 ### Meta-Comments
