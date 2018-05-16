@@ -7,6 +7,10 @@ Based on top of [elm-ast](https://github.com/Bogdanp/elm-ast) parsing library.
 `elm-gen decoders&encoders Model.elm .`  
 Also look at functional tests in ts/MainTests.ts and correspondent files in tests_data folder.
 
+### Config
+Some configuration (mostly about naming) can be applied from config json-file. Example of config can be found in tests_data folder.
+It's correspondent Elm type representation resides in Config.elm
+
 ### Meta-Comments
 Elm-gen supports meta-comments in source code, in form of either `-- //Meta-Comment` or `{-| //Meta-Comment -}`.  
 For now, there are 3 meta-comments:

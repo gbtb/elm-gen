@@ -218,4 +218,13 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('generates decoder for non-record type alias' , () => {
+    shell.exec("./elm-gen d,e ../tests_data/Alias.elm .");
+    expect(
+      readFile(outPath("AliasDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("AliasDecodersAndEncoders.elm"))
+    );
+  });
+
 });

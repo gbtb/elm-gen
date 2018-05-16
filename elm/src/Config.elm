@@ -27,3 +27,27 @@ type UnionTypeGeneratorFeature
     = TrivialString
     | TrivialObject
     | DefaultConstructor
+
+
+type alias JsonModulesImports =
+    { decode : ProvidedNameModification
+    , encode : ProvidedNameModification
+    }
+
+
+getDecodePrefix conf =
+    case conf of
+        DontTouch ->
+            "Json.Decode"
+
+        Replace str ->
+            str
+
+
+getEncodePrefix conf =
+    case conf of
+        DontTouch ->
+            "Json.Encode"
+
+        Replace str ->
+            str

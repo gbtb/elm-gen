@@ -81,7 +81,7 @@ getDependencies knownTypes type_ =
                 List.foldl (\item accum -> traverseType knownTypes item False |> Set.union accum) (Set.empty) listOfConstructors
 
         TypeAliasDeclaration _ recordType ->
-            setdiff knownTypes <| traverseType knownTypes recordType False
+            setdiff knownTypes <| traverseType knownTypes recordType True
 
         _ ->
             Debug.crash "Unsupported type"

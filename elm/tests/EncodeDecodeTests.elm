@@ -5,7 +5,7 @@ import Test exposing (..)
 import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
-import Transformation exposing (..)
+import Transformation.Shared exposing (..)
 import Set
 import Dict
 import Json.Decode as JD

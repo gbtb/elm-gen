@@ -1,10 +1,10 @@
 module Composer exposing (..)
 
-import Ast exposing (..)
-import Ast.BinOp exposing (operators)
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
-import Transformation exposing (genDecoderForRecord, genDecoder, defaultContext, genMaybeDecoder, genMaybeEncoder, TransformationContext, genEncoder, genEncoderForMappable)
+import Transformation.Decoders exposing (genDecoder, genMaybeDecoder)
+import Transformation.Encoders exposing (genEncoder, genEncoderForMappable, genMaybeEncoder)
+import Transformation.Shared exposing (TransformationContext)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
@@ -16,8 +16,10 @@ import Utils exposing (..)
 import Model exposing (..)
 import StatementFilters exposing (..)
 import ReadConfig exposing (..)
+import Config exposing (ProvidedNameModification(..))
 import TypeName
-import Imports exposing (importFoldHelper, getTypes)
+import Imports exposing (importFoldHelper, getTypes, printImports)
+import Config exposing (..)
 
 
 type alias GenContext =
@@ -35,24 +37,6 @@ type alias GenContext =
     , maybeStub : Statement
     , mappableStubs : Dict.Dict TypeName (List Statement)
     }
-
-
-decTcName =
-    [ "JD", "Decoder" ]
-
-
-encTcName =
-    [ "JE", "Value" ]
-
-
-mappableTypes =
-    List.map TypeName.fromStr [ "List", "Array" ]
-
-
-mappableStubs ctx =
-    Dict.fromList <|
-        List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
-            mappableTypes
 
 
 makeFileLoadRequest : Model -> Result String (Dict.Dict (List String) TypeSet)
@@ -90,12 +74,12 @@ resolveDependencies model =
 
         decoders =
             Dict.fromList <|
-                List.filterMap (extractDecoder decTcName) <|
+                List.filterMap (extractDecoder <| decTcName model.config.jsonModulesImports.decode) <|
                     statements
 
         encoders =
             Dict.fromList <|
-                List.filterMap (extractEncoder encTcName) <|
+                List.filterMap (extractEncoder <| encTcName model.config.jsonModulesImports.encode) <|
                     statements
 
         moduleName =
@@ -104,7 +88,7 @@ resolveDependencies model =
                 |> fromJust "Module declaration not found!"
 
         importsDict =
-            Dict.fromList [ ( moduleName, Set.fromList <| getTypes model.genCommand decoders encoders unknownTypes statements ) ]
+            Dict.fromList [ ( moduleName, Set.fromList <| getTypes model.genCommand model.config.jsonModulesImports decoders encoders unknownTypes statements ) ]
 
         typesDict =
             Dict.union model.typesDict <|
@@ -201,10 +185,10 @@ generate model =
                             , defaultUnionValues = model.defaultUnionValues
                             , dontDeclareTypes = model.dontDeclareTypes
                             , generatorFunc = genDecoder
-                            , prefix = "JD"
+                            , prefix = getDecodePrefix model.config.jsonModulesImports.decode
                             , makeName = nameFunc
                             , isDecoders = True
-                            , maybeStub = (genMaybeDecoder nameFunc)
+                            , maybeStub = (genMaybeDecoder model.config.jsonModulesImports.decode nameFunc)
                             , mappableStubs = Dict.empty
                             }
                             graphHeads
@@ -225,13 +209,13 @@ generate model =
                             , defaultUnionValues = model.defaultUnionValues
                             , dontDeclareTypes = model.dontDeclareTypes
                             , generatorFunc = genEncoder
-                            , prefix = "JE"
+                            , prefix = getEncodePrefix model.config.jsonModulesImports.encode
                             , makeName = nameFunc
                             , isDecoders = False
-                            , maybeStub = (genMaybeEncoder nameFunc)
+                            , maybeStub = (genMaybeEncoder model.config.jsonModulesImports.encode nameFunc)
                             , mappableStubs =
                                 (mappableStubs
-                                    { decoderPrefix = "JE" }
+                                    { decoderPrefix = getEncodePrefix model.config.jsonModulesImports.encode }
                                 )
                             }
                             graphHeads
@@ -268,7 +252,7 @@ composeFile model =
                         [ printStatement <| ModuleDeclaration moduleDeclaration AllExport
                         , emptyLine
                         ]
-                            ++ printImports model.genCommand model.importsDict model.typesDict
+                            ++ printImports model.genCommand model.importsDict model.typesDict model.config.jsonModulesImports
                             ++ (printDecoders model.generatedDecoders)
                             ++ (printDecoders model.generatedEncoders)
                             ++ [ emptyLine ]
@@ -321,7 +305,7 @@ generateDecodersHelper genContext item =
                         Just stmt ->
                             Just <|
                                 genContext.generatorFunc
-                                    (Transformation.initContext
+                                    (Transformation.Shared.initContext
                                         genContext.isDecoders
                                         genContext.prefix
                                         genContext.makeName
@@ -350,53 +334,33 @@ getImportedTypes exportSet =
             []
 
 
-printImports command importsDict typesDict =
-    let
-        encodersImports =
-            [ ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing) ]
-
-        decodersImports =
-            [ ImportStatement [ "Json", "Decode" ] (Just "JD") (Nothing)
-            , ImportStatement [ "Json", "Decode", "Pipeline" ] (Just "JD") (Nothing)
-            ]
-
-        extImports1 =
-            if willGenDecoder command then
-                decodersImports
-            else
-                []
-
-        extImports2 =
-            if willGenEncoder command then
-                extImports1 ++ encodersImports
-            else
-                extImports1
-
-        toExport ts =
-            ts |> Set.toList |> List.map (toExportHelper typesDict) |> SubsetExport |> Just
-
-        typesImports =
-            List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
-                Dict.toList
-                    importsDict
-    in
-        List.map printStatement (extImports2 ++ typesImports)
-
-
-toExportHelper typesDict name =
-    TypeExport (TypeName.toSingleName name) (getExportSet typesDict name)
-
-
-getExportSet typesDict name =
-    let
-        isUnionType =
-            Dict.get name typesDict |> Maybe.andThen extractType |> Maybe.map Tuple.second |> Maybe.withDefault False
-    in
-        if isUnionType then
-            Just AllExport
-        else
-            Nothing
-
-
 emptyLine =
     Line 0 ""
+
+
+decTcName conf =
+    case conf of
+        DontTouch ->
+            [ "Json", "Decode", "Decoder" ]
+
+        Replace str ->
+            [ str, "Decoder" ]
+
+
+encTcName conf =
+    case conf of
+        DontTouch ->
+            [ "Json", "Encode", "Decoder" ]
+
+        Replace str ->
+            [ str, "Value" ]
+
+
+mappableTypes =
+    List.map TypeName.fromStr [ "List", "Array" ]
+
+
+mappableStubs ctx =
+    Dict.fromList <|
+        List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
+            mappableTypes

@@ -10,6 +10,7 @@ import Utils exposing (..)
 import Printer exposing (printStatement)
 import StatementFilters exposing (..)
 import Maybe.Extra as Maybe
+import Config exposing (..)
 
 
 importFoldHelper importStmt ( unknownTypes, modulesDict ) =
@@ -81,14 +82,31 @@ getImportedTypes exportSet =
             []
 
 
-printImports command importsDict typesDict =
+printImports command importsDict typesDict conf =
     let
         encodersImports =
-            [ ImportStatement [ "Json", "Encode" ] (Just "JE") (Nothing) ]
+            [ ImportStatement [ "Json", "Encode" ]
+                (case conf.encode of
+                    DontTouch ->
+                        Nothing
+
+                    Replace str ->
+                        Just str
+                )
+                (Nothing)
+            ]
+
+        decodeAlias =
+            case conf.decode of
+                DontTouch ->
+                    Nothing
+
+                Replace str ->
+                    Just str
 
         decodersImports =
-            [ ImportStatement [ "Json", "Decode" ] (Just "JD") (Nothing)
-            , ImportStatement [ "Json", "Decode", "Pipeline" ] (Just "JD") (Nothing)
+            [ ImportStatement [ "Json", "Decode" ] (decodeAlias) (Nothing)
+            , ImportStatement [ "Json", "Decode", "Pipeline" ] (decodeAlias) (Nothing)
             ]
 
         extImports1 =
@@ -135,11 +153,11 @@ getExportSet typesDict name =
 {-|
 Extracts types from type declarations
 -}
-getTypes genCommand decoders encoders unknownTypes lst =
+getTypes genCommand jsonModulesImports decoders encoders unknownTypes lst =
     let
         extractTypeFromDecoderOrEncoder st =
-            extractDecoder [ "JD", "Decode" ] st
-                |> Maybe.or (extractEncoder [ "JE", "Value" ] st)
+            extractDecoder [ getDecodePrefix jsonModulesImports.decode, "Decode" ] st
+                |> Maybe.or (extractEncoder [ getEncodePrefix jsonModulesImports.decode, "Value" ] st)
                 |> Maybe.map (\( typeName, _ ) -> ( typeName, False ))
     in
         List.sort <|

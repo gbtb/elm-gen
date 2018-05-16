@@ -2,8 +2,7 @@ module ModelDecoders exposing (..)
 
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
-import Json.Encode as JE
-import Config exposing (NameModification, ProvidedNameModification(..), UnionTypeGeneratorFeature(..))
+import Config exposing (JsonModulesImports, NameModification, ProvidedNameModification(..), UnionTypeGeneratorFeature(..))
 import Model exposing (Config, GenCommand(..), InputInfo, MetaComment(..))
 
 
@@ -26,6 +25,10 @@ configDecoder =
             , suffix = ""
             , providedName = DontTouch
             }
+        |> JD.optional "jsonModulesImports" jsonModulesImportsDecoder
+            { decode = Replace "JD"
+            , encode = Replace "JE"
+            }
         |> JD.optional "unionTypeGeneratorFeatures" (JD.list unionTypeGeneratorFeatureDecoder) []
 
 
@@ -47,6 +50,13 @@ inputInfoDecoder =
         |> JD.required "genCommand" genCommandDecoder
 
 
+jsonModulesImportsDecoder : JD.Decoder JsonModulesImports
+jsonModulesImportsDecoder =
+    JD.decode JsonModulesImports
+        |> JD.required "decode" providedNameModificationDecoder
+        |> JD.required "encode" providedNameModificationDecoder
+
+
 maybeDecoder decoder =
     JD.oneOf
         [ JD.null Nothing
@@ -59,6 +69,7 @@ metaCommentDecoder =
     JD.oneOf
         [ JD.field "Ignore" (JD.succeed Ignore)
         , JD.field "DefaultValue" (JD.succeed DefaultValue)
+        , JD.field "NoDeclaration" (JD.succeed NoDeclaration)
         ]
 
 
