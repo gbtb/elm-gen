@@ -42,6 +42,7 @@ suite =
                             , encodersName = { prefix = "encode", suffix = "", providedName = DontTouch }
                             , decodersName = { prefix = "", suffix = "decoder", providedName = DontTouch }
                             , outputFileName = { prefix = "", suffix = "", providedName = Replace "Decoders" }
+                            , jsonModulesImports = { decode = Replace "JD", encode = Replace "JE" }
                             , unionTypeGeneratorFeatures = [ TrivialString ]
                             }
                         )
