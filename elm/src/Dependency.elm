@@ -33,7 +33,7 @@ makeDependencyGraph nonHeads knownTypes statements =
 
 graphHelper knownTypes stmt accum =
     let
-        retrievedDeps =
+        retrievedDepsRes =
             getDependencies knownTypes stmt
     in
         Result.andThen
@@ -44,22 +44,28 @@ graphHelper knownTypes stmt accum =
                             name =
                                 getTypeName typeName
                         in
-                            Ok
-                                ( Set.union nonHeads retrievedDeps
-                                , Dict.update name (updateDependencies retrievedDeps) graph
-                                    |> (updateGraphForHardcodedTypes retrievedDeps)
+                            Result.map
+                                (\retrievedDeps ->
+                                    ( Set.union nonHeads retrievedDeps
+                                    , Dict.update name (updateDependencies retrievedDeps) graph
+                                        |> (updateGraphForHardcodedTypes retrievedDeps)
+                                    )
                                 )
+                                retrievedDepsRes
 
                     TypeAliasDeclaration typeName _ ->
                         let
                             name =
                                 getTypeName typeName
                         in
-                            Ok
-                                ( Set.union nonHeads retrievedDeps
-                                , Dict.update name (updateDependencies retrievedDeps) graph
-                                    |> (updateGraphForHardcodedTypes retrievedDeps)
+                            Result.map
+                                (\retrievedDeps ->
+                                    ( Set.union nonHeads retrievedDeps
+                                    , Dict.update name (updateDependencies retrievedDeps) graph
+                                        |> (updateGraphForHardcodedTypes retrievedDeps)
+                                    )
                                 )
+                                retrievedDepsRes
 
                     _ ->
                         Err ("Unsupported type: " ++ toString stmt)
@@ -79,18 +85,19 @@ setdiff =
     flip Set.diff
 
 
-getDependencies : TypeSet -> Statement -> TypeSet
+getDependencies : TypeSet -> Statement -> Result String TypeSet
 getDependencies knownTypes type_ =
     case type_ of
         TypeDeclaration _ listOfConstructors ->
-            setdiff knownTypes <|
-                List.foldl (\item accum -> traverseType knownTypes item False |> Set.union accum) (Set.empty) listOfConstructors
+            Ok <|
+                setdiff knownTypes <|
+                    List.foldl (\item accum -> traverseType knownTypes item False |> Set.union accum) (Set.empty) listOfConstructors
 
         TypeAliasDeclaration _ recordType ->
-            setdiff knownTypes <| traverseType knownTypes recordType True
+            Ok <| setdiff knownTypes <| traverseType knownTypes recordType True
 
         _ ->
-            Debug.crash "Unsupported type"
+            Err <| "Unsupported type: " ++ toString type_
 
 
 traverseType knownTypes type_ useQualType =
