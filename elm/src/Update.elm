@@ -1,4 +1,4 @@
-module Update exposing (update, Msg(..))
+module Update exposing (update, Msg(..), PseudoCmd(..))
 
 import ReadConfig exposing (readConfig)
 import Model exposing (..)
@@ -19,6 +19,14 @@ type Msg
     | Generate
     | Print
     | ReadConfig String
+    | PseudoCmd PseudoCmd
+
+
+type PseudoCmd
+    = LogMessage String
+    | ErrorMessage String
+    | Output ( String, String )
+    | RequestFiles (List (List String))
 
 
 update comms msg model =
@@ -85,6 +93,9 @@ update comms msg model =
 
                     Err e ->
                         ( model, comms.errorMessage <| "Error during printing stage: " ++ e )
+
+        PseudoCmd _ ->
+            ( model, Cmd.none )
 
 
 updateInitialParse comms model parsedStatements fileNames rootDir genCommand =
