@@ -61,21 +61,26 @@ update comms msg model =
                 imports =
                     List.filter (extractImport >> asFilter) model.parsedStatements
             in
-                if Set.isEmpty new_model.unknownTypes then
-                    ( new_model, Cmd.batch [ comms.logMessage "Parsing is complete, all required types are loaded...", makeCmd Generate ] )
-                else
-                    let
-                        importsDict =
-                            makeFileLoadRequest new_model
-                    in
-                        case importsDict of
-                            Ok dict ->
-                                ( { new_model | importsDict = Dict.union new_model.importsDict dict }
-                                , comms.requestFiles <| Dict.keys dict
-                                )
+                case new_model of
+                    Ok new_model ->
+                        if Set.isEmpty new_model.unknownTypes then
+                            ( new_model, Cmd.batch [ comms.logMessage "Parsing is complete, all required types are loaded...", makeCmd Generate ] )
+                        else
+                            let
+                                importsDict =
+                                    makeFileLoadRequest new_model
+                            in
+                                case importsDict of
+                                    Ok dict ->
+                                        ( { new_model | importsDict = Dict.union new_model.importsDict dict }
+                                        , comms.requestFiles <| Dict.keys dict
+                                        )
 
-                            Err e ->
-                                ( new_model, comms.errorMessage e )
+                                    Err e ->
+                                        ( new_model, comms.errorMessage e )
+
+                    Err e ->
+                        ( model, comms.errorMessage e )
 
         Generate ->
             ( generate model

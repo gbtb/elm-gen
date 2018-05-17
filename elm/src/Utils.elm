@@ -63,3 +63,17 @@ willGenDecoder genCommand =
 
 willGenEncoder genCommand =
     genCommand == Encoders || genCommand == DecodersAndEncoders
+
+
+values l =
+    List.foldl
+        (\item accum ->
+            case item of
+                Ok v ->
+                    accum ++ [ v ]
+
+                Err _ ->
+                    accum
+        )
+        []
+        l

@@ -21,44 +21,50 @@ knownTypes =
 
 makeDependencyGraph nonHeads knownTypes statements =
     let
-        ( nonHeads_, graph ) =
-            List.foldl (graphHelper knownTypes) ( nonHeads, Dict.empty ) statements
+        res =
+            List.foldl (graphHelper knownTypes) (Ok ( nonHeads, Dict.empty )) statements
     in
-        ( Set.diff (Set.fromList <| Dict.keys graph) nonHeads_, graph )
+        Result.map (\( nonHeads_, graph ) -> ( Set.diff (Set.fromList <| Dict.keys graph) nonHeads_, graph )) res
 
 
 
 --graphHelper : Set.Set String -> Statement -> ( Set.Set String, Dict.Dict String (Set.Set String) ) -> ( Set.Set String, Dict.Dict String (Set.Set String) )
 
 
-graphHelper knownTypes stmt ( nonHeads, graph ) =
+graphHelper knownTypes stmt accum =
     let
         retrievedDeps =
             getDependencies knownTypes stmt
     in
-        case stmt of
-            TypeDeclaration typeName _ ->
-                let
-                    name =
-                        getTypeName typeName
-                in
-                    ( Set.union nonHeads retrievedDeps
-                    , Dict.update name (updateDependencies retrievedDeps) graph
-                        |> (updateGraphForHardcodedTypes retrievedDeps)
-                    )
+        Result.andThen
+            (\( nonHeads, graph ) ->
+                case stmt of
+                    TypeDeclaration typeName _ ->
+                        let
+                            name =
+                                getTypeName typeName
+                        in
+                            Ok
+                                ( Set.union nonHeads retrievedDeps
+                                , Dict.update name (updateDependencies retrievedDeps) graph
+                                    |> (updateGraphForHardcodedTypes retrievedDeps)
+                                )
 
-            TypeAliasDeclaration typeName _ ->
-                let
-                    name =
-                        getTypeName typeName
-                in
-                    ( Set.union nonHeads retrievedDeps
-                    , Dict.update name (updateDependencies retrievedDeps) graph
-                        |> (updateGraphForHardcodedTypes retrievedDeps)
-                    )
+                    TypeAliasDeclaration typeName _ ->
+                        let
+                            name =
+                                getTypeName typeName
+                        in
+                            Ok
+                                ( Set.union nonHeads retrievedDeps
+                                , Dict.update name (updateDependencies retrievedDeps) graph
+                                    |> (updateGraphForHardcodedTypes retrievedDeps)
+                                )
 
-            _ ->
-                Debug.crash "Unsupported type"
+                    _ ->
+                        Err ("Unsupported type: " ++ toString stmt)
+            )
+            accum
 
 
 updateGraphForHardcodedTypes retrievedDeps d =

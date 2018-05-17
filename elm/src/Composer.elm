@@ -10,6 +10,7 @@ import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
 import List.Extra as List
 import Maybe.Extra as Maybe
+import Result.Extra as Result
 import Set
 import Dict
 import Utils exposing (..)
@@ -57,7 +58,7 @@ makeFileLoadRequest model =
 {-| This function is designed to handle additional loading of type definitions came through fileLoadRequest
  as well as initial loading of provided input file(s)
 -}
-resolveDependencies : Model -> Model
+resolveDependencies : Model -> Result String Model
 resolveDependencies model =
     let
         firstCall =
@@ -87,9 +88,6 @@ resolveDependencies model =
                 |> Maybe.andThen extractModuleDeclaration
                 |> fromJust "Module declaration not found!"
 
-        importsDict =
-            Dict.fromList [ ( moduleName, Set.fromList <| getTypes model.genCommand model.config.jsonModulesImports decoders encoders unknownTypes statements ) ]
-
         typesDict =
             Dict.union model.typesDict <|
                 (makeTypesDict types)
@@ -97,32 +95,58 @@ resolveDependencies model =
         ( oldGraphHeads, oldGraph ) =
             model.dependencies
 
-        ( newGraphHeads, newGraph ) =
+        newGraphRes =
             makeDependencyGraph (List.foldl Set.union Set.empty <| Dict.values oldGraph)
                 (knownTypes)
                 types
 
-        ( graphHeads, graph ) =
-            ( Set.union newGraphHeads oldGraphHeads, Dict.union oldGraph newGraph )
+        joinedGraphRes =
+            Result.map
+                (\( newGraphHeads, newGraph ) ->
+                    ( Set.union newGraphHeads oldGraphHeads, Dict.union oldGraph newGraph )
+                )
+                newGraphRes
 
-        usedTypes =
-            Dict.values graph
-                |> List.foldl Set.union Set.empty
+        usedTypesRes =
+            Result.map
+                (\( graphHeads, graph ) ->
+                    Dict.values graph
+                        |> List.foldl Set.union Set.empty
+                )
+                joinedGraphRes
 
-        unknownTypes =
-            getUnknownTypes (getWideImports statements) usedTypes (keysSet typesDict)
+        unknownTypesRes =
+            Result.map (\usedTypes -> getUnknownTypes (getWideImports statements) usedTypes (keysSet typesDict)) usedTypesRes
+
+        importsDictRes =
+            Result.map
+                (\unknownTypes ->
+                    Dict.fromList
+                        [ ( moduleName
+                          , Set.fromList <|
+                                getTypes model.genCommand model.config.jsonModulesImports decoders encoders unknownTypes statements
+                          )
+                        ]
+                )
+                unknownTypesRes
     in
-        { model
-            | typesDict = typesDict
-            , unknownTypes = unknownTypes
-            , dependencies = ( graphHeads, graph )
-            , newlyParsedStatements = []
-            , providedDecoders = Dict.union decoders model.providedDecoders
-            , providedEncoders = Dict.union encoders model.providedEncoders
-            , importsDict =
-                Dict.union importsDict model.importsDict
-            , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
-        }
+        Result.map3
+            (\( graphHeads, graph ) unknownTypes importsDict ->
+                { model
+                    | typesDict = typesDict
+                    , unknownTypes = unknownTypes
+                    , dependencies = ( graphHeads, graph )
+                    , newlyParsedStatements = []
+                    , providedDecoders = Dict.union decoders model.providedDecoders
+                    , providedEncoders = Dict.union encoders model.providedEncoders
+                    , importsDict =
+                        Dict.union importsDict model.importsDict
+                    , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
+                }
+            )
+            joinedGraphRes
+            unknownTypesRes
+            importsDictRes
 
 
 {-| This func calculates unknown types from types used (userDefinedTypes) minus defined types in type-def dict,
@@ -287,15 +311,15 @@ generateDecoders genContext graphHeads =
         typesList =
             Set.toList <| setdiff excludeTypes <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
     in
-        List.map (generateDecodersHelper genContext) typesList |> Maybe.values
+        List.map (generateDecodersHelper genContext) typesList |> Utils.values
 
 
-generateDecodersHelper : GenContext -> TypeName -> Maybe (List Statement)
+generateDecodersHelper : GenContext -> TypeName -> Result String (List Statement)
 generateDecodersHelper genContext item =
     if item == TypeName.fromStr "Maybe" then
-        Just [ genContext.maybeStub ]
+        Ok [ genContext.maybeStub ]
     else
-        Maybe.orLazy (Dict.get item genContext.mappableStubs)
+        Result.orLazy (Dict.get item genContext.mappableStubs |> Result.fromMaybe "Mappable stub not found")
             (\_ ->
                 let
                     typeDeclaration =
@@ -303,7 +327,7 @@ generateDecodersHelper genContext item =
                 in
                     case typeDeclaration of
                         Just stmt ->
-                            Just <|
+                            Ok <|
                                 genContext.generatorFunc
                                     (Transformation.Shared.initContext
                                         genContext.isDecoders
@@ -317,7 +341,7 @@ generateDecodersHelper genContext item =
                                     stmt
 
                         Nothing ->
-                            Debug.crash ("Type not found in types dict! " ++ (TypeName.toStr item) ++ (toString genContext.mappableStubs))
+                            Err ("Type not found in types dict! " ++ (TypeName.toStr item) ++ (toString genContext.mappableStubs))
             )
 
 
