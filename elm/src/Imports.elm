@@ -16,7 +16,7 @@ import Config exposing (..)
 importFoldHelper importStmt ( unknownTypes, modulesDict ) =
     let
         defaultReturn =
-            ( unknownTypes, modulesDict )
+            Ok ( unknownTypes, modulesDict )
     in
         if Set.isEmpty unknownTypes then
             defaultReturn
@@ -31,12 +31,13 @@ importFoldHelper importStmt ( unknownTypes, modulesDict ) =
                             Just exportSet ->
                                 filterOutConcreteTypesImports unknownTypes exportSet moduleName modulesDict
                                     |> filterOutGeneralImports moduleName
+                                    |> Ok
 
                             Nothing ->
-                                filterOutGeneralImports moduleName ( unknownTypes, modulesDict )
+                                filterOutGeneralImports moduleName ( unknownTypes, modulesDict ) |> Ok
 
                 _ ->
-                    Debug.crash "Non-import statement passed to function!"
+                    Err ("Non-import statement passed to function: " ++ toString importStmt)
 
 
 filterOutConcreteTypesImports unknownTypes exportSet moduleName modulesDict =

@@ -46,13 +46,17 @@ makeFileLoadRequest model =
         imports =
             List.filter (extractImport >> asFilter) model.parsedStatements
 
-        ( unknownTypes, modulesDict ) =
-            List.foldl importFoldHelper ( model.unknownTypes, Dict.empty ) imports
+        importFoldRes =
+            List.foldl (\item -> Result.andThen (importFoldHelper item)) (Ok ( model.unknownTypes, Dict.empty )) imports
     in
-        if not <| Set.isEmpty unknownTypes then
-            Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList <| Set.map TypeName.toStr unknownTypes) ++ "] in import statements!"
-        else
-            Ok <| Dict.filter (\_ s -> s |> Set.isEmpty |> not) modulesDict
+        Result.andThen
+            (\( unknownTypes, modulesDict ) ->
+                if not <| Set.isEmpty unknownTypes then
+                    Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList <| Set.map TypeName.toStr unknownTypes) ++ "] in import statements!"
+                else
+                    Ok <| Dict.filter (\_ s -> s |> Set.isEmpty |> not) modulesDict
+            )
+            importFoldRes
 
 
 {-| This function is designed to handle additional loading of type definitions came through fileLoadRequest
