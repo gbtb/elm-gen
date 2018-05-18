@@ -89,12 +89,13 @@ getDependencies : TypeSet -> Statement -> Result String TypeSet
 getDependencies knownTypes type_ =
     case type_ of
         TypeDeclaration _ listOfConstructors ->
-            Ok <|
-                setdiff knownTypes <|
-                    List.foldl (\item accum -> traverseType knownTypes item False |> Set.union accum) (Set.empty) listOfConstructors
+            Result.map
+                (setdiff knownTypes)
+            <|
+                List.foldl (\item accumRes -> Result.map2 Set.union accumRes <| traverseType knownTypes item False) (Ok Set.empty) listOfConstructors
 
         TypeAliasDeclaration _ recordType ->
-            Ok <| setdiff knownTypes <| traverseType knownTypes recordType True
+            Result.map (setdiff knownTypes) <| traverseType knownTypes recordType True
 
         _ ->
             Err <| "Unsupported type: " ++ toString type_
@@ -103,10 +104,18 @@ getDependencies knownTypes type_ =
 traverseType knownTypes type_ useQualType =
     let
         helper startSet listOfTypes =
-            setdiff knownTypes <|
+            Result.map
+                (\traversed ->
+                    setdiff knownTypes traversed
+                )
+            <|
                 List.foldl
-                    (\item accum -> traverseType knownTypes item True |> Set.union accum)
-                    startSet
+                    (\item accumRes ->
+                        Result.map2 Set.union
+                            (traverseType knownTypes item True)
+                            accumRes
+                    )
+                    (Ok startSet)
                     listOfTypes
     in
         case type_ of
@@ -127,7 +136,7 @@ traverseType knownTypes type_ useQualType =
                 List.map Tuple.second listOfFields |> helper Set.empty
 
             _ ->
-                Debug.crash "Unsupported type"
+                Err "Unsupported type"
 
 
 updateDependencies newValues oldValues =
