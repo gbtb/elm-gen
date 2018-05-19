@@ -98,6 +98,10 @@ infixl 5 +>
 infixl 5 :>
 
 
+join str lst =
+    lst |> List.intersperse (defaultLine str) |> List.foldl (\item accum -> accum :> item) (defaultLine "")
+
+
 prepend line printRepr =
     flattenResult <|
         Result.map2

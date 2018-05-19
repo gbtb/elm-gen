@@ -110,39 +110,49 @@ printStatement stmt =
 
 
 printFunctionTypeDeclaration name type_ =
-    defaultLine <| name ++ " : " ++ printType initContext type_
+    defaultLine name +> defaultLine " : " +> printType initContext type_
 
 
+printTypeFoldHelper : Result String PrintRepr -> Result String PrintRepr -> Result String PrintRepr
+printTypeFoldHelper item accum =
+    accum +> (defaultLine " ") +> item
+
+
+printType : PrintContext -> Type -> Result String PrintRepr
 printType ctx type_ =
     case type_ of
         TypeConstructor qualifiedType typesList ->
-            String.join "." qualifiedType
-                ++ (if List.length typesList > 0 then
-                        " "
+            defaultLine (String.join "." qualifiedType)
+                +> (if List.length typesList > 0 then
+                        defaultLine " "
                     else
-                        ""
+                        defaultLine ""
                    )
-                ++ (String.join " " <| List.map (printType { ctx | nestedTypeApplication = False }) typesList)
+                +> (List.map (printType { ctx | nestedTypeApplication = False }) typesList
+                        |> PrintRepr.join " "
+                   )
 
         TypeTuple typesList ->
-            "("
-                ++ (List.map (printType { ctx | nestedTypeApplication = False }) typesList |> String.join " ")
-                ++ ")"
+            defaultLine "("
+                +> (List.map (printType { ctx | nestedTypeApplication = False }) typesList
+                        |> PrintRepr.join " "
+                   )
+                +> defaultLine ")"
 
         TypeApplication tc1 tc2 ->
             let
-                str =
+                printRepr =
                     printType { ctx | nestedTypeApplication = True } tc1
-                        ++ " -> "
-                        ++ printType { ctx | nestedTypeApplication = False } tc2
+                        +> defaultLine " -> "
+                        +> printType { ctx | nestedTypeApplication = False } tc2
             in
                 if ctx.nestedTypeApplication then
-                    "(" ++ str ++ ")"
+                    defaultLine "(" +> printRepr +> defaultLine ")"
                 else
-                    str
+                    printRepr
 
         TypeVariable name ->
-            name
+            defaultLine name
 
         _ ->
             Err ("Cannot print this type(yet?): " ++ toString type_)
@@ -225,26 +235,27 @@ printCaseBranch ctx ( leftPart, rightPart ) =
 printImportStatement moduleName alias exportSet =
     let
         lineStart =
-            "import " ++ (String.join "." moduleName)
+            defaultLine <| "import " ++ (String.join "." moduleName)
     in
-        defaultLine <|
-            lineStart
-                ++ (alias |> Maybe.map (\a -> " as " ++ a) |> Maybe.withDefault "")
-                ++ (case exportSet of
-                        Just AllExport ->
-                            " exposing (..)"
+        lineStart
+            +> (alias |> Maybe.map (\a -> " as " ++ a) |> Maybe.withDefault "" |> defaultLine)
+            +> (case exportSet of
+                    Just AllExport ->
+                        defaultLine " exposing (..)"
 
-                        Just (SubsetExport typesList) ->
-                            " exposing ("
-                                ++ (List.map printExportSet typesList |> String.join ", ")
-                                ++ ")"
+                    Just (SubsetExport typesList) ->
+                        defaultLine " exposing ("
+                            +> (List.map printExportSet typesList
+                                    |> PrintRepr.join ", "
+                               )
+                            +> defaultLine ")"
 
-                        Nothing ->
-                            ""
+                    Nothing ->
+                        defaultLine ""
 
-                        _ ->
-                            Err "Export set print error"
-                   )
+                    _ ->
+                        Err "Export set print error"
+               )
 
 
 printRecord context exprList =
@@ -265,26 +276,26 @@ printRecord context exprList =
                 (defaultLine "}")
 
 
-printExportSet : ExportSet -> String
+printExportSet : ExportSet -> Result String PrintRepr
 printExportSet es =
     case es of
         AllExport ->
-            ".."
+            defaultLine ".."
 
         SubsetExport nestedList ->
-            List.map printExportSet nestedList |> String.join ", "
+            List.map printExportSet nestedList |> PrintRepr.join ", "
 
         FunctionExport name ->
-            name
+            defaultLine name
 
         TypeExport name constructors ->
-            name
-                ++ case constructors of
+            defaultLine name
+                :> case constructors of
                     Nothing ->
-                        ""
+                        defaultLine ""
 
                     Just nestedEs ->
-                        "(" ++ printExportSet nestedEs ++ ")"
+                        defaultLine "(" :> printExportSet nestedEs :> defaultLine ")"
 
 
 printModuleDeclaration moduleName exportSet =
