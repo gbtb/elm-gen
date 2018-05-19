@@ -4,6 +4,7 @@ import Ast.Statement exposing (..)
 import Ast.BinOp exposing (..)
 import Ast.Expression exposing (..)
 import List.Extra as List
+import Result.Extra as Result
 import Utils exposing (..)
 import PrintRepr exposing (..)
 import StatementFilters exposing (..)
@@ -29,7 +30,7 @@ initContext =
     }
 
 
-printExpression : PrintContext -> Expression -> PrintRepr
+printExpression : PrintContext -> Expression -> Result String PrintRepr
 printExpression context e =
     let
         defaultContext =
@@ -37,13 +38,13 @@ printExpression context e =
     in
         case e of
             Integer i ->
-                Line 0 <| toString i
+                defaultLine <| toString i
 
             String s ->
-                Line 0 <| "\"" ++ s ++ "\""
+                defaultLine <| "\"" ++ s ++ "\""
 
             Variable l ->
-                Line 0 <| String.join "." l
+                defaultLine <| String.join "." l
 
             Application func arg ->
                 printExpression context func
@@ -56,13 +57,13 @@ printExpression context e =
                                 else
                                     identity
                                )
-                            |> ident 1
+                            |> Result.map (ident 1)
 
             BinOp op arg1 arg2 ->
                 printBinOp context op arg1 arg2
 
             Access (Variable [ prefix ]) names ->
-                Line 0 (String.join "." (prefix :: names))
+                defaultLine (String.join "." (prefix :: names))
 
             List exprList ->
                 printList context exprList
@@ -75,22 +76,25 @@ printExpression context e =
 
             Case expr caseBranches ->
                 makeLines
-                    (Line 0 "case" +> (printExpression context expr) +> Line 0 "of")
-                    (List.map (printCaseBranch context) caseBranches |> List.intersperse (Line -1 "") |> Lines)
+                    (defaultLine "case" +> (printExpression context expr) +> defaultLine "of")
+                    (List.map (printCaseBranch context) caseBranches
+                        |> Result.combine
+                        |> Result.map (\l -> l |> List.intersperse (Line -1 "") |> Lines)
+                    )
 
             _ ->
-                Debug.crash "Cant print this type of expression!"
+                Err ("Cant print this type of expression!: " ++ toString e)
 
 
-printStatement : Statement -> PrintRepr
+printStatement : Statement -> Result String PrintRepr
 printStatement stmt =
     case stmt of
         FunctionDeclaration name args body ->
             let
                 firstLine =
-                    prepend (Line 0 name) (printFunctionArgs args)
+                    prepend (defaultLine name) (printFunctionArgs args)
             in
-                makeLines firstLine <| ident 1 (printExpression initContext body)
+                makeLines firstLine <| Result.map (ident 1) (printExpression initContext body)
 
         ModuleDeclaration moduleName exportSet ->
             printModuleDeclaration moduleName exportSet
@@ -102,11 +106,11 @@ printStatement stmt =
             printFunctionTypeDeclaration name type_
 
         _ ->
-            Debug.crash "Print of this statement is unsupported(yet?)"
+            Err ("Print of this statement is unsupported(yet?): " ++ toString stmt)
 
 
 printFunctionTypeDeclaration name type_ =
-    Line 0 <| name ++ " : " ++ printType initContext type_
+    defaultLine <| name ++ " : " ++ printType initContext type_
 
 
 printType ctx type_ =
@@ -141,7 +145,7 @@ printType ctx type_ =
             name
 
         _ ->
-            Debug.crash "Cannot print this type(yet?)"
+            Err ("Cannot print this type(yet?): " ++ toString type_)
 
 
 printBinOp context op arg1 arg2 =
@@ -163,57 +167,57 @@ printBinOp context op arg1 arg2 =
         else
             makeLines (leftPart op initContext arg1) <|
                 if not context.printedBinOp then
-                    ident 1 <| rightPart op { context | printedBinOp = True } arg2
+                    Result.map (ident 1) <| rightPart op { context | printedBinOp = True } arg2
                 else
                     rightPart op { context | printedBinOp = True } arg2
 
 
-printList : PrintContext -> List Expression -> PrintRepr
+printList : PrintContext -> List Expression -> Result String PrintRepr
 printList ctx exprList =
     case exprList of
         [] ->
-            Line 0 "[]"
+            defaultLine "[]"
 
         [ a ] ->
-            (Line 0 "[" +> (printExpression ctx a) +> Line 0 "]")
+            (defaultLine "[" +> (printExpression ctx a) +> defaultLine "]")
 
         h :: cons ->
             if ctx.flatList then
                 (List.foldl (\accum item -> item :> accum)
-                    (Line 0 "[" +> printExpression ctx h)
-                    (List.map (\expr -> (Line 0 ",") +> printExpression ctx expr) cons)
+                    (defaultLine "[" +> printExpression ctx h)
+                    (List.map (\expr -> (defaultLine ",") +> printExpression ctx expr) cons)
                 )
-                    +> (Line 0 "]")
+                    +> (defaultLine "]")
             else
                 makeLines
                     (List.foldl (\accum item -> makeLines item accum)
-                        (Line 0 "[" +> printExpression ctx h)
-                        (List.map (\expr -> printExpression ctx expr |> prepend (Line 0 ",")) cons)
+                        (defaultLine "[" +> printExpression ctx h)
+                        (List.map (\expr -> printExpression ctx expr |> prepend (defaultLine ",")) cons)
                     )
-                    (Line 0 "]")
+                    (defaultLine "]")
 
 
-printTuple : PrintContext -> List Expression -> PrintRepr
+printTuple : PrintContext -> List Expression -> Result String PrintRepr
 printTuple ctx exprList =
     case exprList of
         [] ->
-            Line 0 "()"
+            defaultLine "()"
 
         h :: cons ->
             (List.foldl (\accum item -> item :> accum)
-                (Line 0 "(" +> printExpression ctx h)
-                (List.map (\expr -> printExpression { ctx | flatList = True } expr |> prepend (Line 0 ",")) cons)
+                (defaultLine "(" +> printExpression ctx h)
+                (List.map (\expr -> printExpression { ctx | flatList = True } expr |> prepend (defaultLine ",")) cons)
             )
-                +> (Line 0 ")")
+                +> (defaultLine ")")
 
 
 printCaseBranch ctx ( leftPart, rightPart ) =
     let
         l1 =
-            ident 1 <| printExpression ctx leftPart +> Line 0 "->"
+            Result.map (ident 1) <| printExpression ctx leftPart +> defaultLine "->"
 
         l2 =
-            ident 2 <| printExpression ctx rightPart
+            Result.map (ident 2) <| printExpression ctx rightPart
     in
         makeLines l1 l2
 
@@ -223,7 +227,7 @@ printImportStatement moduleName alias exportSet =
         lineStart =
             "import " ++ (String.join "." moduleName)
     in
-        Line 0 <|
+        defaultLine <|
             lineStart
                 ++ (alias |> Maybe.map (\a -> " as " ++ a) |> Maybe.withDefault "")
                 ++ (case exportSet of
@@ -239,26 +243,26 @@ printImportStatement moduleName alias exportSet =
                             ""
 
                         _ ->
-                            Debug.crash "111"
+                            Err "Export set print error"
                    )
 
 
 printRecord context exprList =
     case exprList of
         [] ->
-            Line 0 "{}"
+            defaultLine "{}"
 
         [ ( name, expr ) ] ->
-            Line 0 ("{ " ++ name ++ " =") +> printExpression context expr +> Line 0 "}"
+            defaultLine ("{ " ++ name ++ " =") +> printExpression context expr +> defaultLine "}"
 
         h :: cons ->
             makeLines
                 (List.foldl
-                    (\( name, expr ) accum -> makeLines accum <| Line 0 (", " ++ name ++ " =") +> printExpression context expr)
-                    (Line 0 ("{ " ++ (Tuple.first h) ++ " =") +> printExpression context (Tuple.second h))
+                    (\( name, expr ) accum -> makeLines accum <| defaultLine (", " ++ name ++ " =") +> printExpression context expr)
+                    (defaultLine ("{ " ++ (Tuple.first h) ++ " =") +> printExpression context (Tuple.second h))
                     cons
                 )
-                (Line 0 "}")
+                (defaultLine "}")
 
 
 printExportSet : ExportSet -> String
@@ -290,16 +294,16 @@ printModuleDeclaration moduleName exportSet =
     in
         case exportSet of
             AllExport ->
-                Line 0 <| lineStart ++ "(..)"
+                defaultLine <| lineStart ++ "(..)"
 
             _ ->
-                Debug.crash "Not supported export set to print!"
+                Err "Not supported export set to print!"
 
 
 printFunctionArgs args =
     let
         lineEnding =
-            Line 0 "="
+            defaultLine "="
     in
         (case args of
             [] ->

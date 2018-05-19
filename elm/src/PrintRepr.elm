@@ -8,6 +8,10 @@ type PrintRepr
     | Lines (List PrintRepr)
 
 
+defaultLine s =
+    Ok <| Line 0 s
+
+
 produceString : Int -> PrintRepr -> String
 produceString tabWidth printRepr =
     case printRepr of
