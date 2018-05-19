@@ -77,3 +77,15 @@ values l =
         )
         []
         l
+
+
+flattenResult r =
+    case r of
+        Ok (Ok a) ->
+            Ok a
+
+        Ok (Err e) ->
+            Err e
+
+        Err e ->
+            Err e

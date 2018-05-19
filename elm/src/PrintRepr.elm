@@ -1,5 +1,7 @@
 module PrintRepr exposing (..)
 
+import Utils exposing (..)
+
 
 type PrintRepr
     = Line Int String
@@ -25,83 +27,110 @@ ident i printRepr =
             Lines <| List.map (\printRepr -> ident i printRepr) lines
 
 
-makeLines : PrintRepr -> PrintRepr -> PrintRepr
+makeLines : Result x PrintRepr -> Result x PrintRepr -> Result x PrintRepr
 makeLines arg1 arg2 =
-    case ( arg1, arg2 ) of
-        ( Line _ _, Line _ _ ) ->
-            Lines [ arg1, arg2 ]
+    Result.map2
+        (\arg1 arg2 ->
+            case ( arg1, arg2 ) of
+                ( Line _ _, Line _ _ ) ->
+                    Lines [ arg1, arg2 ]
 
-        ( Line _ _, Lines l ) ->
-            Lines (arg1 :: l)
+                ( Line _ _, Lines l ) ->
+                    Lines (arg1 :: l)
 
-        ( Lines l, Line _ _ ) ->
-            Lines (l ++ [ arg2 ])
+                ( Lines l, Line _ _ ) ->
+                    Lines (l ++ [ arg2 ])
 
-        ( Lines l1, Lines l2 ) ->
-            Lines (l1 ++ l2)
+                ( Lines l1, Lines l2 ) ->
+                    Lines (l1 ++ l2)
+        )
+        arg1
+        arg2
 
 
 (+>) a b =
-    case ( a, b ) of
-        ( Line i str1, Line _ str2 ) ->
-            Line i (str1 ++ " " ++ str2)
+    flattenResult <|
+        Result.map2
+            (\a b ->
+                case ( a, b ) of
+                    ( Line i str1, Line _ str2 ) ->
+                        Ok <| Line i (str1 ++ " " ++ str2)
 
-        ( Line i str1, Lines lines ) ->
-            let
-                identedLines =
-                    List.map (\printRepr -> ident i printRepr) lines
-            in
-                Lines (a :: identedLines)
+                    ( Line i str1, Lines lines ) ->
+                        let
+                            identedLines =
+                                List.map (\printRepr -> ident i printRepr) lines
+                        in
+                            Ok <| Lines (a :: identedLines)
 
-        _ ->
-            Debug.crash "Failed to concatenate!"
+                    _ ->
+                        Err "Failed to concatenate!"
+            )
+            a
+            b
 infixl 5 +>
 
 
 (:>) a b =
-    case ( a, b ) of
-        ( Line i str1, Line _ str2 ) ->
-            Line i (str1 ++ str2)
+    flattenResult <|
+        Result.map2
+            (\a b ->
+                case ( a, b ) of
+                    ( Line i str1, Line _ str2 ) ->
+                        Ok <| Line i (str1 ++ str2)
 
-        ( Line i str1, Lines lines ) ->
-            let
-                identedLines =
-                    List.map (\printRepr -> ident i printRepr) lines
-            in
-                Lines (a :: identedLines)
+                    ( Line i str1, Lines lines ) ->
+                        let
+                            identedLines =
+                                List.map (\printRepr -> ident i printRepr) lines
+                        in
+                            Ok <| Lines (a :: identedLines)
 
-        _ ->
-            Debug.crash "Failed to concatenate!"
+                    _ ->
+                        Err "Failed to concatenate!"
+            )
+            a
+            b
 infixl 5 :>
 
 
 prepend line printRepr =
-    case line of
-        Line _ str1 ->
-            case printRepr of
-                Line i str2 ->
-                    Line i (str1 ++ " " ++ str2)
+    flattenResult <|
+        Result.map2
+            (\line printRepr ->
+                case line of
+                    Line _ str1 ->
+                        case printRepr of
+                            Line i str2 ->
+                                Ok <| Line i (str1 ++ " " ++ str2)
 
-                Lines ((Line i str2) :: cons) ->
-                    Lines <| (Line i (str1 ++ " " ++ str2)) :: cons
+                            Lines ((Line i str2) :: cons) ->
+                                Ok <| Lines <| (Line i (str1 ++ " " ++ str2)) :: cons
 
-                _ ->
-                    Debug.crash "Incorrect PrinterRepresentation to prepend to!"
+                            _ ->
+                                Err "Incorrect PrinterRepresentation to prepend to!"
 
-        _ ->
-            Debug.crash "Cannot prepend bunch of lines!"
+                    _ ->
+                        Err "Cannot prepend bunch of lines!"
+            )
+            line
+            printRepr
 
 
 braces printRepr =
-    case printRepr of
-        Line i str ->
-            Line i ("(" ++ str ++ ")")
+    Result.andThen
+        (\printRepr ->
+            case printRepr of
+                Line i str ->
+                    Ok <| Line i ("(" ++ str ++ ")")
 
-        Lines ((Line i str) :: cons) ->
-            (Line i ("(" ++ str) :: cons) ++ [ Line i ")" ] |> Lines
+                Lines ((Line i str) :: cons) ->
+                    (Line i ("(" ++ str) :: cons) ++ [ Line i ")" ] |> Lines |> Ok
 
-        Lines [] ->
-            Debug.crash "Empty lines print repr"
+                Lines [] ->
+                    Err "Empty lines print repr"
 
-        Lines _ ->
-            Debug.crash "Lines has nested Lines, should be flattened!"
+                Lines _ ->
+                    Err "Lines has nested Lines, should be flattened!"
+        )
+        printRepr
