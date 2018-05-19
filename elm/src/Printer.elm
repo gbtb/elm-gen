@@ -110,7 +110,7 @@ printStatement stmt =
 
 
 printFunctionTypeDeclaration name type_ =
-    defaultLine name +> defaultLine " : " +> printType initContext type_
+    defaultLine name :> defaultLine " : " :> printType initContext type_
 
 
 printTypeFoldHelper : Result String PrintRepr -> Result String PrintRepr -> Result String PrintRepr
@@ -123,31 +123,31 @@ printType ctx type_ =
     case type_ of
         TypeConstructor qualifiedType typesList ->
             defaultLine (String.join "." qualifiedType)
-                +> (if List.length typesList > 0 then
+                :> (if List.length typesList > 0 then
                         defaultLine " "
                     else
                         defaultLine ""
                    )
-                +> (List.map (printType { ctx | nestedTypeApplication = False }) typesList
+                :> (List.map (printType { ctx | nestedTypeApplication = False }) typesList
                         |> PrintRepr.join " "
                    )
 
         TypeTuple typesList ->
             defaultLine "("
-                +> (List.map (printType { ctx | nestedTypeApplication = False }) typesList
+                :> (List.map (printType { ctx | nestedTypeApplication = False }) typesList
                         |> PrintRepr.join " "
                    )
-                +> defaultLine ")"
+                :> defaultLine ")"
 
         TypeApplication tc1 tc2 ->
             let
                 printRepr =
                     printType { ctx | nestedTypeApplication = True } tc1
-                        +> defaultLine " -> "
-                        +> printType { ctx | nestedTypeApplication = False } tc2
+                        :> defaultLine " -> "
+                        :> printType { ctx | nestedTypeApplication = False } tc2
             in
                 if ctx.nestedTypeApplication then
-                    defaultLine "(" +> printRepr +> defaultLine ")"
+                    defaultLine "(" :> printRepr :> defaultLine ")"
                 else
                     printRepr
 
@@ -238,17 +238,17 @@ printImportStatement moduleName alias exportSet =
             defaultLine <| "import " ++ (String.join "." moduleName)
     in
         lineStart
-            +> (alias |> Maybe.map (\a -> " as " ++ a) |> Maybe.withDefault "" |> defaultLine)
-            +> (case exportSet of
+            :> (alias |> Maybe.map (\a -> " as " ++ a) |> Maybe.withDefault "" |> defaultLine)
+            :> (case exportSet of
                     Just AllExport ->
                         defaultLine " exposing (..)"
 
                     Just (SubsetExport typesList) ->
                         defaultLine " exposing ("
-                            +> (List.map printExportSet typesList
+                            :> (List.map printExportSet typesList
                                     |> PrintRepr.join ", "
                                )
-                            +> defaultLine ")"
+                            :> defaultLine ")"
 
                     Nothing ->
                         defaultLine ""

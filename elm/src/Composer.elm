@@ -273,17 +273,18 @@ composeFile model =
                                 )
                     )
     in
-        Result.map
+        Result.andThen
             (\moduleDeclaration ->
-                String.join "\n" <|
-                    List.map (produceString 4) <|
-                        [ printStatement <| ModuleDeclaration moduleDeclaration AllExport
-                        , emptyLine
-                        ]
-                            ++ printImports model.genCommand model.importsDict model.typesDict model.config.jsonModulesImports
-                            ++ (printDecoders model.generatedDecoders)
-                            ++ (printDecoders model.generatedEncoders)
-                            ++ [ emptyLine ]
+                Result.map (String.join "\n") <|
+                    Result.combine <|
+                        List.map (Result.map <| produceString 4) <|
+                            [ printStatement <| ModuleDeclaration moduleDeclaration AllExport
+                            , Ok <| emptyLine
+                            ]
+                                ++ printImports model.genCommand model.importsDict model.typesDict model.config.jsonModulesImports
+                                ++ (printDecoders model.generatedDecoders)
+                                ++ (printDecoders model.generatedEncoders)
+                                ++ [ Ok <| emptyLine ]
             )
             moduleDeclaration
 
@@ -292,7 +293,7 @@ printDecoders decoders =
     if decoders == [] then
         []
     else
-        List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
+        List.concatMap (\decoderDecl -> [ Ok emptyLine, Ok emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
 makeTypesDict types =
