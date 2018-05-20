@@ -13,6 +13,7 @@ import Model exposing (TypeName)
 import TypeName
 import Transformation.Shared exposing (..)
 import Config exposing (getEncodePrefix)
+import Result.Extra as Result
 
 
 genEncoder : TransformationContext -> Statement -> Result String (List Statement)
@@ -66,7 +67,7 @@ genEncoderForUnionType ctx unionType =
     in
         case unionType of
             TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
-                Ok <| begin <| List.map (genEncoderForUnionTypeConstructor ctx) constructors
+                Result.map begin <| Result.combine <| List.map (genEncoderForUnionTypeConstructor ctx) constructors
 
             _ ->
                 Err "It is not a union type!"
@@ -81,18 +82,25 @@ genEncoderForUnionTypeConstructor ctx cons =
 
                 start =
                     variable "" name
+
+                generationRes =
+                    encodeUnionTypeArgs ctx name args
             in
-                ( if n == 0 then
-                    start
-                  else
-                    List.foldl (\item accum -> Application accum item) start (getDummyVariables n)
-                , (Application (variable ctx.decoderPrefix "object")
-                    (List <| [ encodeUnionTypeArgs ctx name args ])
-                  )
-                )
+                Result.map
+                    (\encodedRes ->
+                        ( if n == 0 then
+                            start
+                          else
+                            List.foldl (\item accum -> Application accum item) start (getDummyVariables n)
+                        , (Application (variable ctx.decoderPrefix "object")
+                            (List <| [ encodedRes ])
+                          )
+                        )
+                    )
+                    generationRes
 
         _ ->
-            Debug.crash "Invalid union type constructor!"
+            Err "Invalid union type constructor!"
 
 
 encodeUnionTypeArgs ctx name args =
@@ -105,16 +113,21 @@ encodeUnionTypeArgs ctx name args =
     in
         case args of
             [] ->
-                tup <| variable ctx.decoderPrefix "null"
+                Ok <| tup <| variable ctx.decoderPrefix "null"
 
             [ a ] ->
-                tup <| Application (encodeType ctx a) (variable "" "v1")
+                Result.map (\genRes -> tup <| Application genRes (variable "" "v1")) (encodeType ctx a)
 
             l ->
-                tup <|
-                    Application (variable ctx.decoderPrefix "list") <|
-                        List <|
-                            List.map (\( type_, var ) -> Application (encodeType ctx type_) var) (List.zip l <| getDummyVariables n)
+                Result.map
+                    (\x ->
+                        tup <|
+                            Application (variable ctx.decoderPrefix "list") <|
+                                List x
+                    )
+                <|
+                    Result.combine <|
+                        List.map (\( type_, var ) -> Result.map (\x -> Application x var) (encodeType ctx type_)) (List.zip l <| getDummyVariables n)
 
 
 genEncoderForRecord : TransformationContext -> TypeName -> Type -> Result String Expression
@@ -125,10 +138,11 @@ genEncoderForRecord ctx typeName recordAst =
     in
         case recordAst of
             TypeRecord l ->
-                Ok <| Application (Variable <| qualifiedName ctx.decoderPrefix "object") (List <| List.map (encodeRecordField ctx) l)
+                Result.map (Application (Variable <| qualifiedName ctx.decoderPrefix "object"))
+                    (Result.map List <| Result.combine <| List.map (encodeRecordField ctx) l)
 
             TypeConstructor _ _ ->
-                Ok <| Application (encodeType ctx recordAst) (variable "" "value")
+                Result.map (\gen -> Application gen (variable "" "value")) (encodeType ctx recordAst)
 
             _ ->
                 Err "It is not a record!"
@@ -139,7 +153,7 @@ encodeRecordField ctx ( name, type_ ) =
         typeEncoder ctx =
             encodeType ctx type_
     in
-        Tuple [ (String name), (Application <| typeEncoder ctx) (Access (variable "" "value") [ name ]) ]
+        Result.map (\typeEncoder -> Tuple [ (String name), (Application <| typeEncoder) (Access (variable "" "value") [ name ]) ]) (typeEncoder ctx)
 
 
 encodeType ctx type_ =
@@ -153,28 +167,28 @@ encodeType ctx type_ =
         TypeTuple l ->
             case List.reverse <| List.indexedMap (\i x -> ( i, x )) l of
                 [] ->
-                    Debug.crash "Empty TypeTuple is not allowed!"
+                    Err "Empty TypeTuple is not allowed!"
 
                 _ ->
-                    Debug.crash "Op"
+                    Err "Not implemented yet"
 
         _ ->
-            Debug.crash "Cannot encode this type yet?"
+            Err "Cannot encode this type yet?"
 
 
 encodeKnownTypeConstructor ctx typeName argsTypes =
     let
         firstType =
             Dict.get typeName ctx.knownTypes
-                |> fromJust ("Unknown type somehow leaked to transformation stage." ++ TypeName.toStr typeName)
-                |> Variable
+                |> Result.fromMaybe ("Unknown type somehow leaked to transformation stage." ++ TypeName.toStr typeName)
+                |> Result.map Variable
     in
         case argsTypes of
             [] ->
                 firstType
 
             l ->
-                List.foldl (\item accum -> Application accum (encodeType ctx item)) firstType l
+                List.foldl (\item accum -> Result.map2 Application accum (encodeType ctx item)) firstType l
 
 
 genMaybeEncoder conf nameFunc =
