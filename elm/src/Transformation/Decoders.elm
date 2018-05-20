@@ -15,7 +15,7 @@ import Transformation.Shared exposing (..)
 import Config exposing (getDecodePrefix)
 
 
-genDecoder : TransformationContext -> Statement -> List Statement
+genDecoder : TransformationContext -> Statement -> Result String (List Statement)
 genDecoder context stmt =
     case stmt of
         TypeAliasDeclaration leftPart rightPart ->
@@ -23,13 +23,13 @@ genDecoder context stmt =
                 typeName =
                     getTypeName leftPart
             in
-                genDecoderHelper context leftPart rightPart (genDecoderForTypeAlias context typeName rightPart)
+                Ok <| genDecoderHelper context leftPart rightPart (genDecoderForTypeAlias context typeName rightPart)
 
         TypeDeclaration leftPart rightPart ->
-            genDecoderHelper context leftPart rightPart (genDecoderForUnionType context stmt)
+            Ok <| genDecoderHelper context leftPart rightPart (genDecoderForUnionType context stmt)
 
         _ ->
-            Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
+            Err "Cannot generate decoder for this kind of statement(yet?)"
 
 
 genDecoderHelper context leftPart rightPart generatorInvocation =

@@ -83,9 +83,18 @@ update comms msg model =
                         ( model, comms.errorMessage e )
 
         Generate ->
-            ( generate model
-            , Cmd.batch [ comms.logMessage "Generating decoders...", makeCmd Print ]
-            )
+            let
+                generationRes =
+                    generate model
+            in
+                case generationRes of
+                    Ok modelAfterGeneration ->
+                        ( modelAfterGeneration
+                        , Cmd.batch [ comms.logMessage "Generating decoders...", makeCmd Print ]
+                        )
+
+                    Err e ->
+                        ( model, comms.errorMessage e )
 
         Print ->
             let

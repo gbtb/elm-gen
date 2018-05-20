@@ -65,6 +65,7 @@ willGenEncoder genCommand =
     genCommand == Encoders || genCommand == DecodersAndEncoders
 
 
+values : List (Result a b) -> List b
 values l =
     List.foldl
         (\item accum ->

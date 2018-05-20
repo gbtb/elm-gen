@@ -31,7 +31,7 @@ type alias GenContext =
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict TypeName Expression
     , dontDeclareTypes : Set.Set TypeName
-    , generatorFunc : TransformationContext -> Statement -> List Statement
+    , generatorFunc : TransformationContext -> Statement -> Result String (List Statement)
     , prefix : String
     , makeName : String -> String
     , isDecoders : Bool
@@ -172,7 +172,7 @@ getWideImports statements =
     List.filterMap extractImportedModuleName statements |> List.map Just
 
 
-generate : Model -> Model
+generate : Model -> Result String Model
 generate model =
     let
         moduleDeclaration =
@@ -195,61 +195,70 @@ generate model =
                 |> Set.toList
                 |> makeNameMapping (getNameFunc model.config.encodersName)
                 |> Dict.union (Dict.map (\_ v -> [ v ]) model.providedEncoders)
+
+        generatedDecodersRes =
+            if willGenDecoder model.genCommand then
+                let
+                    nameFunc =
+                        (getNameFunc model.config.decodersName)
+                in
+                    generateDecoders
+                        { typesDict = model.typesDict
+                        , graph = graph
+                        , userDefinedTypes = userDefinedTypesDecoders
+                        , excludedTypes = (keysSet model.providedDecoders)
+                        , defaultRecordValues = model.defaultRecordValues
+                        , defaultUnionValues = model.defaultUnionValues
+                        , dontDeclareTypes = model.dontDeclareTypes
+                        , generatorFunc = genDecoder
+                        , prefix = getDecodePrefix model.config.jsonModulesImports.decode
+                        , makeName = nameFunc
+                        , isDecoders = True
+                        , maybeStub = (genMaybeDecoder model.config.jsonModulesImports.decode nameFunc)
+                        , mappableStubs = Dict.empty
+                        }
+                        graphHeads
+            else
+                Ok []
+
+        generatedEncodersRes =
+            if willGenEncoder model.genCommand then
+                let
+                    nameFunc =
+                        (getNameFunc model.config.encodersName)
+                in
+                    generateDecoders
+                        { typesDict = model.typesDict
+                        , graph = graph
+                        , userDefinedTypes = (userDefinedTypesEncoders)
+                        , excludedTypes = (keysSet model.providedEncoders)
+                        , defaultRecordValues = model.defaultRecordValues
+                        , defaultUnionValues = model.defaultUnionValues
+                        , dontDeclareTypes = model.dontDeclareTypes
+                        , generatorFunc = genEncoder
+                        , prefix = getEncodePrefix model.config.jsonModulesImports.encode
+                        , makeName = nameFunc
+                        , isDecoders = False
+                        , maybeStub = (genMaybeEncoder model.config.jsonModulesImports.encode nameFunc)
+                        , mappableStubs =
+                            (mappableStubs
+                                { decoderPrefix = getEncodePrefix model.config.jsonModulesImports.encode }
+                            )
+                        }
+                        graphHeads
+            else
+                Ok []
     in
-        { model
-            | moduleDeclaration = moduleDeclaration
-            , generatedDecoders =
-                if willGenDecoder model.genCommand then
-                    let
-                        nameFunc =
-                            (getNameFunc model.config.decodersName)
-                    in
-                        generateDecoders
-                            { typesDict = model.typesDict
-                            , graph = graph
-                            , userDefinedTypes = userDefinedTypesDecoders
-                            , excludedTypes = (keysSet model.providedDecoders)
-                            , defaultRecordValues = model.defaultRecordValues
-                            , defaultUnionValues = model.defaultUnionValues
-                            , dontDeclareTypes = model.dontDeclareTypes
-                            , generatorFunc = genDecoder
-                            , prefix = getDecodePrefix model.config.jsonModulesImports.decode
-                            , makeName = nameFunc
-                            , isDecoders = True
-                            , maybeStub = (genMaybeDecoder model.config.jsonModulesImports.decode nameFunc)
-                            , mappableStubs = Dict.empty
-                            }
-                            graphHeads
-                else
-                    []
-            , generatedEncoders =
-                if willGenEncoder model.genCommand then
-                    let
-                        nameFunc =
-                            (getNameFunc model.config.encodersName)
-                    in
-                        generateDecoders
-                            { typesDict = model.typesDict
-                            , graph = graph
-                            , userDefinedTypes = (userDefinedTypesEncoders)
-                            , excludedTypes = (keysSet model.providedEncoders)
-                            , defaultRecordValues = model.defaultRecordValues
-                            , defaultUnionValues = model.defaultUnionValues
-                            , dontDeclareTypes = model.dontDeclareTypes
-                            , generatorFunc = genEncoder
-                            , prefix = getEncodePrefix model.config.jsonModulesImports.encode
-                            , makeName = nameFunc
-                            , isDecoders = False
-                            , maybeStub = (genMaybeEncoder model.config.jsonModulesImports.encode nameFunc)
-                            , mappableStubs =
-                                (mappableStubs
-                                    { decoderPrefix = getEncodePrefix model.config.jsonModulesImports.encode }
-                                )
-                            }
-                            graphHeads
-                else
-                    []
-        }
+        Result.map2
+            (\generatedDecoders generatedEncoders ->
+                { model
+                    | moduleDeclaration = moduleDeclaration
+                    , generatedDecoders = generatedDecoders
+                    , generatedEncoders = generatedEncoders
+                }
+            )
+            generatedDecodersRes
+            generatedEncodersRes
 
 
 composeFile : Model -> Result String String
@@ -316,7 +325,7 @@ generateDecoders genContext graphHeads =
         typesList =
             Set.toList <| setdiff excludeTypes <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
     in
-        List.map (generateDecodersHelper genContext) typesList |> Utils.values
+        List.map (generateDecodersHelper genContext) typesList |> Result.combine
 
 
 generateDecodersHelper : GenContext -> TypeName -> Result String (List Statement)
@@ -332,18 +341,17 @@ generateDecodersHelper genContext item =
                 in
                     case typeDeclaration of
                         Just stmt ->
-                            Ok <|
-                                genContext.generatorFunc
-                                    (Transformation.Shared.initContext
-                                        genContext.isDecoders
-                                        genContext.prefix
-                                        genContext.makeName
-                                        genContext.userDefinedTypes
-                                        genContext.defaultRecordValues
-                                        genContext.defaultUnionValues
-                                        genContext.dontDeclareTypes
-                                    )
-                                    stmt
+                            genContext.generatorFunc
+                                (Transformation.Shared.initContext
+                                    genContext.isDecoders
+                                    genContext.prefix
+                                    genContext.makeName
+                                    genContext.userDefinedTypes
+                                    genContext.defaultRecordValues
+                                    genContext.defaultUnionValues
+                                    genContext.dontDeclareTypes
+                                )
+                                stmt
 
                         Nothing ->
                             Err ("Type not found in types dict! " ++ (TypeName.toStr item) ++ (toString genContext.mappableStubs))

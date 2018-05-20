@@ -15,7 +15,7 @@ import Transformation.Shared exposing (..)
 import Config exposing (getEncodePrefix)
 
 
-genEncoder : TransformationContext -> Statement -> List Statement
+genEncoder : TransformationContext -> Statement -> Result String (List Statement)
 genEncoder context stmt =
     case stmt of
         TypeAliasDeclaration leftPart rightPart ->
@@ -23,13 +23,13 @@ genEncoder context stmt =
                 typeName =
                     getTypeName leftPart
             in
-                genEncoderHelper context leftPart rightPart (genEncoderForRecord context typeName rightPart)
+                Result.map (genEncoderHelper context leftPart rightPart) (genEncoderForRecord context typeName rightPart)
 
         TypeDeclaration leftPart rightPart ->
-            genEncoderHelper context leftPart rightPart (genEncoderForUnionType context stmt)
+            Result.map (genEncoderHelper context leftPart rightPart) (genEncoderForUnionType context stmt)
 
         _ ->
-            Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
+            Err "Cannot generate decoder for this kind of statement(yet?)"
 
 
 genEncoderHelper context leftPart rightPart generatorInvocation =
@@ -58,7 +58,7 @@ genEncoderHelper context leftPart rightPart generatorInvocation =
             [ encoderDeclaration, encoderBody ]
 
 
-genEncoderForUnionType : TransformationContext -> Statement -> Expression
+genEncoderForUnionType : TransformationContext -> Statement -> Result String Expression
 genEncoderForUnionType ctx unionType =
     let
         begin =
@@ -66,10 +66,10 @@ genEncoderForUnionType ctx unionType =
     in
         case unionType of
             TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
-                begin <| List.map (genEncoderForUnionTypeConstructor ctx) constructors
+                Ok <| begin <| List.map (genEncoderForUnionTypeConstructor ctx) constructors
 
             _ ->
-                Debug.crash "It is not a union type!"
+                Err "It is not a union type!"
 
 
 genEncoderForUnionTypeConstructor ctx cons =
@@ -117,7 +117,7 @@ encodeUnionTypeArgs ctx name args =
                             List.map (\( type_, var ) -> Application (encodeType ctx type_) var) (List.zip l <| getDummyVariables n)
 
 
-genEncoderForRecord : TransformationContext -> TypeName -> Type -> Expression
+genEncoderForRecord : TransformationContext -> TypeName -> Type -> Result String Expression
 genEncoderForRecord ctx typeName recordAst =
     let
         encodeApp =
@@ -125,13 +125,13 @@ genEncoderForRecord ctx typeName recordAst =
     in
         case recordAst of
             TypeRecord l ->
-                Application (Variable <| qualifiedName ctx.decoderPrefix "object") (List <| List.map (encodeRecordField ctx) l)
+                Ok <| Application (Variable <| qualifiedName ctx.decoderPrefix "object") (List <| List.map (encodeRecordField ctx) l)
 
             TypeConstructor _ _ ->
-                Application (encodeType ctx recordAst) (variable "" "value")
+                Ok <| Application (encodeType ctx recordAst) (variable "" "value")
 
             _ ->
-                Debug.crash "It is not a record!"
+                Err "It is not a record!"
 
 
 encodeRecordField ctx ( name, type_ ) =
