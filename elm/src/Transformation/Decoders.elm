@@ -21,13 +21,17 @@ genDecoder context stmt =
     case stmt of
         TypeAliasDeclaration leftPart rightPart ->
             let
-                typeName =
+                typeNameRes =
                     getTypeName leftPart
             in
-                Result.map (genDecoderHelper context leftPart rightPart) (genDecoderForTypeAlias context typeName rightPart)
+                Result.andThen
+                    (\typeName ->
+                        Result.andThen (genDecoderHelper context leftPart rightPart) (genDecoderForTypeAlias context typeName rightPart)
+                    )
+                    typeNameRes
 
         TypeDeclaration leftPart rightPart ->
-            Result.map (genDecoderHelper context leftPart rightPart) (genDecoderForUnionType context stmt)
+            Result.andThen (genDecoderHelper context leftPart rightPart) (genDecoderForUnionType context stmt)
 
         _ ->
             Err "Cannot generate decoder for this kind of statement(yet?)"
@@ -35,28 +39,35 @@ genDecoder context stmt =
 
 genDecoderHelper context leftPart rightPart generatorInvocation =
     let
-        typeName =
+        typeNameRes =
             getTypeName leftPart
-
-        decoderName =
-            TypeName.getDecoderName typeName context.makeName
-
-        decoderType =
-            if String.length context.decoderPrefix > 0 then
-                [ context.decoderPrefix, "Decoder" ]
-            else
-                [ "Decoder" ]
-
-        decoderDeclaration =
-            FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
-
-        decoderBody =
-            FunctionDeclaration (decoderName) [] <| generatorInvocation
     in
-        if Set.member typeName context.dontDeclareTypes then
-            List.singleton decoderBody
-        else
-            [ decoderDeclaration, decoderBody ]
+        case typeNameRes of
+            Ok typeName ->
+                let
+                    decoderName =
+                        TypeName.getDecoderName typeName context.makeName
+
+                    decoderType =
+                        if String.length context.decoderPrefix > 0 then
+                            [ context.decoderPrefix, "Decoder" ]
+                        else
+                            [ "Decoder" ]
+
+                    decoderDeclaration =
+                        FunctionTypeDeclaration decoderName <| TypeConstructor decoderType ([ leftPart ])
+
+                    decoderBody =
+                        FunctionDeclaration (decoderName) [] <| generatorInvocation
+                in
+                    Ok <|
+                        if Set.member typeName context.dontDeclareTypes then
+                            List.singleton decoderBody
+                        else
+                            [ decoderDeclaration, decoderBody ]
+
+            Err e ->
+                Err e
 
 
 genDecoderForUnionType : TransformationContext -> Statement -> Result String Expression

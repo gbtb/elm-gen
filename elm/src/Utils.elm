@@ -10,31 +10,13 @@ import Dict
 import Model exposing (GenCommand(..))
 
 
-fromJust err m =
-    case m of
-        Just x ->
-            x
-
-        Nothing ->
-            Debug.crash err
-
-
-fromOk r =
-    case r of
-        Ok x ->
-            x
-
-        Err e ->
-            Debug.crash (toString e)
-
-
 getTypeName t =
     case t of
         TypeConstructor name [] ->
-            name
+            Ok name
 
         _ ->
-            Debug.crash "Cannot extract typeName!"
+            Err "Cannot extract typeName!"
 
 
 getTypeNameFromStatement st =
@@ -46,7 +28,7 @@ getTypeNameFromStatement st =
             getTypeName typeName
 
         _ ->
-            Debug.crash "Cannot extract typeName"
+            Err "Cannot extract typeName"
 
 
 makeCmd =

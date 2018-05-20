@@ -26,7 +26,7 @@ readConfig str =
             config
 
 
-makeOutputFileName : Config -> String -> String
+makeOutputFileName : Config -> String -> Result String String
 makeOutputFileName config name =
     let
         fileName =
@@ -56,7 +56,7 @@ makeOutputFileName config name =
                     Replace str ->
                         Just str
     in
-        fromJust ("Failed to create output file name from: " ++ name) <|
+        Result.fromMaybe ("Failed to create output file name from: " ++ name) <|
             Maybe.map2
                 (\baseName newBaseName ->
                     Regex.replace (Regex.AtMost 1) (Regex.regex <| baseName ++ ".elm") (\_ -> newBaseName ++ ".elm") name
