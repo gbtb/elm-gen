@@ -44,19 +44,17 @@ update comms msg model =
                 parsedStatements =
                     parseModule operators inputInfo.fileContents
             in
-                if List.length model.parsedStatements > 0 then
-                    updateAdditionalParse comms
-                        model
-                        parsedStatements
-                        inputInfo.fileNames
-                        inputInfo.genCommand
-                else
-                    case updateInitialParse comms model parsedStatements inputInfo.fileNames inputInfo.rootDir inputInfo.genCommand of
-                        Ok updated ->
-                            updated
+                case
+                    if List.length model.parsedStatements > 0 then
+                        updateAdditionalParse comms model parsedStatements inputInfo.fileNames inputInfo.genCommand
+                    else
+                        updateInitialParse comms model parsedStatements inputInfo.fileNames inputInfo.rootDir inputInfo.genCommand
+                of
+                    Ok updated ->
+                        updated
 
-                        Err e ->
-                            ( model, comms.errorMessage e )
+                    Err e ->
+                        ( model, comms.errorMessage e )
 
         ResolveDependencies ->
             let
@@ -158,22 +156,26 @@ updateInitialParse comms model parsedStatements fileNames rootDir genCommand =
 
 updateAdditionalParse comms model parsedStatements fileNames genCommand =
     let
-        metaParseResult =
+        metaParseResultRes =
             Result.map applyMetaComments parsedStatements_
 
         parsedStatements_ =
             case parsedStatements of
                 Err e ->
-                    Debug.crash "Failed to parse module! " ++ toString e
+                    Err <| "Failed to parse module! " ++ toString e
 
                 Ok ( _, _, statements ) ->
                     Ok statements
     in
-        ( { model
-            | newlyParsedStatements = metaParseResult.statements
-            , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
-            , defaultUnionValues = Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
-            , dontDeclareTypes = Set.union model.dontDeclareTypes metaParseResult.dontDeclareTypes
-          }
-        , Cmd.batch [ comms.logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
-        )
+        Result.map
+            (\metaParseResult ->
+                ( { model
+                    | newlyParsedStatements = metaParseResult.statements
+                    , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
+                    , defaultUnionValues = Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+                    , dontDeclareTypes = Set.union model.dontDeclareTypes metaParseResult.dontDeclareTypes
+                  }
+                , Cmd.batch [ comms.logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]
+                )
+            )
+            metaParseResultRes

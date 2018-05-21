@@ -39,7 +39,7 @@ subscriptions _ =
                         Parse info
 
                     Err e ->
-                        Debug.crash <| "Input info error! " ++ toString e
+                        Debug.crash <| "Input info error! Probably TS-client & elm-server json protocol mismatch. Err: " ++ toString e
             )
         , config <| ReadConfig
         ]

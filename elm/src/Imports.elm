@@ -11,6 +11,7 @@ import Printer exposing (printStatement)
 import StatementFilters exposing (..)
 import Maybe.Extra as Maybe
 import Config exposing (..)
+import Result.Extra as Result
 
 
 importFoldHelper importStmt ( unknownTypes, modulesDict ) =
@@ -123,17 +124,23 @@ printImports command importsDict typesDict conf =
                 extImports1
 
         toExport ts =
-            ts |> Set.toList |> List.map (toExportHelper typesDict) |> SubsetExport |> Just
+            ts |> Set.toList |> List.map (toExportHelper typesDict) |> Result.combine |> Result.map (SubsetExport >> Just)
 
         typesImports =
-            List.map (\( moduleName, typeSet ) -> ImportStatement moduleName Nothing (toExport typeSet)) <|
-                Dict.toList importsDict
+            Result.combine <|
+                List.map (\( moduleName, typeSet ) -> Result.map (ImportStatement moduleName Nothing) (toExport typeSet)) <|
+                    Dict.toList importsDict
     in
-        List.map printStatement (extImports2 ++ typesImports)
+        case Result.map (\x -> List.map printStatement (extImports2 ++ x)) typesImports of
+            Ok l ->
+                l
+
+            Err e ->
+                [ Err e ]
 
 
 toExportHelper typesDict name =
-    TypeExport (TypeName.toSingleName name) (getExportSet typesDict name)
+    Result.map (\x -> TypeExport x (getExportSet typesDict name)) (TypeName.toSingleName name)
 
 
 getExportSet typesDict name =
