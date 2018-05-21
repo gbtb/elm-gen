@@ -159,15 +159,15 @@ updateInitialParse comms model parsedStatements fileNames rootDir genCommand =
 updateAdditionalParse comms model parsedStatements fileNames genCommand =
     let
         metaParseResult =
-            applyMetaComments parsedStatements_
+            Result.map applyMetaComments parsedStatements_
 
         parsedStatements_ =
             case parsedStatements of
-                Err _ ->
-                    Debug.crash "Failed to parse module!"
+                Err e ->
+                    Debug.crash "Failed to parse module! " ++ toString e
 
                 Ok ( _, _, statements ) ->
-                    statements
+                    Ok statements
     in
         ( { model
             | newlyParsedStatements = metaParseResult.statements
