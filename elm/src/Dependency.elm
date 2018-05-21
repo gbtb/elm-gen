@@ -41,31 +41,33 @@ graphHelper knownTypes stmt accum =
                 case stmt of
                     TypeDeclaration typeName _ ->
                         let
-                            name =
+                            nameRes =
                                 getTypeName typeName
                         in
-                            Result.map
-                                (\retrievedDeps ->
+                            Result.map2
+                                (\retrievedDeps name ->
                                     ( Set.union nonHeads retrievedDeps
                                     , Dict.update name (updateDependencies retrievedDeps) graph
                                         |> (updateGraphForHardcodedTypes retrievedDeps)
                                     )
                                 )
                                 retrievedDepsRes
+                                nameRes
 
                     TypeAliasDeclaration typeName _ ->
                         let
-                            name =
+                            nameRes =
                                 getTypeName typeName
                         in
-                            Result.map
-                                (\retrievedDeps ->
+                            Result.map2
+                                (\retrievedDeps name ->
                                     ( Set.union nonHeads retrievedDeps
                                     , Dict.update name (updateDependencies retrievedDeps) graph
                                         |> (updateGraphForHardcodedTypes retrievedDeps)
                                     )
                                 )
                                 retrievedDepsRes
+                                nameRes
 
                     _ ->
                         Err ("Unsupported type: " ++ toString stmt)

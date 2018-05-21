@@ -21,13 +21,14 @@ genEncoder context stmt =
     case stmt of
         TypeAliasDeclaration leftPart rightPart ->
             let
-                typeName =
+                typeNameRes =
                     getTypeName leftPart
             in
-                Result.map (genEncoderHelper context leftPart rightPart) (genEncoderForRecord context typeName rightPart)
+                Result.andThen (genEncoderHelper context leftPart rightPart)
+                    (Result.andThen (\typeName -> genEncoderForRecord context typeName rightPart) typeNameRes)
 
         TypeDeclaration leftPart rightPart ->
-            Result.map (genEncoderHelper context leftPart rightPart) (genEncoderForUnionType context stmt)
+            Result.andThen (genEncoderHelper context leftPart rightPart) (genEncoderForUnionType context stmt)
 
         _ ->
             Err "Cannot generate decoder for this kind of statement(yet?)"
@@ -35,28 +36,33 @@ genEncoder context stmt =
 
 genEncoderHelper context leftPart rightPart generatorInvocation =
     let
-        typeName =
+        typeNameRes =
             getTypeName leftPart
-
-        decoderName =
-            TypeName.getDecoderName typeName context.makeName
-
-        encoderType =
-            if String.length context.decoderPrefix > 0 then
-                [ context.decoderPrefix, "Value" ]
-            else
-                [ "Value" ]
-
-        encoderDeclaration =
-            FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
-
-        encoderBody =
-            FunctionDeclaration (decoderName) [ variable "" "value" ] <| generatorInvocation
     in
-        if Set.member typeName context.dontDeclareTypes then
-            List.singleton encoderBody
-        else
-            [ encoderDeclaration, encoderBody ]
+        Result.map
+            (\typeName ->
+                let
+                    decoderName =
+                        TypeName.getDecoderName typeName context.makeName
+
+                    encoderType =
+                        if String.length context.decoderPrefix > 0 then
+                            [ context.decoderPrefix, "Value" ]
+                        else
+                            [ "Value" ]
+
+                    encoderDeclaration =
+                        FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
+
+                    encoderBody =
+                        FunctionDeclaration (decoderName) [ variable "" "value" ] <| generatorInvocation
+                in
+                    if Set.member typeName context.dontDeclareTypes then
+                        List.singleton encoderBody
+                    else
+                        [ encoderDeclaration, encoderBody ]
+            )
+            typeNameRes
 
 
 genEncoderForUnionType : TransformationContext -> Statement -> Result String Expression
