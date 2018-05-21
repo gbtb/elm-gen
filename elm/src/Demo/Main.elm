@@ -8,6 +8,12 @@ import Element exposing (..)
 import Element.Input exposing (..)
 import Element.Attributes exposing (..)
 import Style exposing (..)
+import Style.Font as Font
+import Style.Border as Border
+import Style.Color as Color
+import Style.Scale as Scale
+import Style.Shadow as Shadow
+import Color
 import Control
 import Control.Debounce
 import Time
@@ -77,7 +83,10 @@ update msg model =
                             ( { model | genModel = updated_model }, Cmd.map GenMessage cmd )
 
             InputChanged str ->
-                ( { model | input = str }
+                ( { model
+                    | input = str
+                    , genModel = Model.initModel
+                  }
                 , makeCmd
                     (GenMessage <|
                         Update.Parse
@@ -122,47 +131,50 @@ text =
 
 
 view model =
-    viewport (styleSheet [])
+    viewport (styles)
         (column NoStyle
-            []
-            [ header Header [] (text "elm-gen demo")
+            [ minHeight (percent 95), spacingXY 0 20 ]
+            [ header Header [ height (px 50), paddingXY 20 0 ] (el NoStyle [ center, verticalCenter ] (text "elm-gen demo"))
             , mainContent MainContent
                 []
                 (column NoStyle
-                    []
+                    [ paddingXY 20 0, spacing 20, minHeight fill ]
                     [ row NoStyle
-                        [ height (px 400) ]
+                        [ height <| fillPortion 3, spacingXY 40 20, clip ]
                         [ multiline InputArea
-                            [ height (px 400) ]
+                            [ height fill, yScrollbar, paddingXY 2 2 ]
                             { onChange = debounce << InputChanged
                             , value = model.input
                             , label = labelAbove (text "Input file content")
                             , options = [ focusOnLoad ]
                             }
                         , multiline OutputArea
-                            [ height (px 400) ]
+                            [ height fill, yScrollbar, paddingXY 2 2 ]
                             { onChange = OutputChanged
                             , value = model.output
                             , label = labelAbove (text "Output file content")
                             , options = []
                             }
                         ]
-                    , column Log
-                        []
-                        (List.map
-                            (\msg ->
-                                case msg of
-                                    Update.LogMessage str ->
-                                        text str
+                    , row Log
+                        [ height <| fillPortion 1, minHeight (px 200) ]
+                        [ column NoStyle
+                            [ yScrollbar ]
+                            (List.map
+                                (\msg ->
+                                    case msg of
+                                        Update.LogMessage str ->
+                                            row LogInfo [] [ text str ]
 
-                                    Update.ErrorMessage str ->
-                                        text str
+                                        Update.ErrorMessage str ->
+                                            row LogError [] [ text str ]
 
-                                    _ ->
-                                        empty
+                                        _ ->
+                                            empty
+                                )
+                                model.messages
                             )
-                            model.messages
-                        )
+                        ]
                     ]
                 )
             ]
@@ -177,3 +189,35 @@ type Styles
     | GenButton
     | OutputArea
     | Log
+    | LogError
+    | LogInfo
+
+
+styles =
+    styleSheet
+        [ style LogInfo
+            [ Color.text Color.green ]
+        , style InputArea
+            [ Shadow.simple
+            , focus
+                [ Shadow.simple ]
+            ]
+        , style OutputArea
+            [ Shadow.simple
+            , focus [ Shadow.simple ]
+            ]
+        , style LogError
+            [ Color.text Color.red ]
+        , style Log
+            [ Shadow.simple
+            ]
+        , style Header
+            [ Font.size (scaled 2)
+            , Shadow.simple
+            ]
+        , importUrl "https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.css"
+        ]
+
+
+scaled =
+    Scale.modular 16 1.618
