@@ -32,7 +32,15 @@ import Update exposing (update, Msg(..))
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ input <| (\value -> JD.decodeValue inputInfoDecoder value |> fromOk |> Parse)
+        [ input <|
+            (\value ->
+                case JD.decodeValue inputInfoDecoder value of
+                    Ok info ->
+                        Parse info
+
+                    Err e ->
+                        Debug.crash <| "Input info error! " ++ toString e
+            )
         , config <| ReadConfig
         ]
 

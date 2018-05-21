@@ -51,7 +51,12 @@ update comms msg model =
                         inputInfo.fileNames
                         inputInfo.genCommand
                 else
-                    updateInitialParse comms model parsedStatements inputInfo.fileNames inputInfo.rootDir inputInfo.genCommand
+                    case updateInitialParse comms model parsedStatements inputInfo.fileNames inputInfo.rootDir inputInfo.genCommand of
+                        Ok updated ->
+                            updated
+
+                        Err e ->
+                            ( model, comms.errorMessage e )
 
         ResolveDependencies ->
             let
@@ -114,33 +119,41 @@ update comms msg model =
 
 updateInitialParse comms model parsedStatements fileNames rootDir genCommand =
     let
-        metaParseResult =
-            applyMetaComments parsedStatements_
+        metaParseResultRes =
+            Result.map applyMetaComments parsedStatements_
 
         parsedStatements_ =
             case parsedStatements of
-                Err _ ->
-                    Debug.crash "Failed to parse module!"
+                Err e ->
+                    Err <| "Failed to parse module! Parser error: " ++ toString e
 
                 Ok ( _, _, statements ) ->
-                    statements
+                    Ok statements
 
         updatedConfig =
             ReadConfig.updateConfig model.config genCommand
     in
-        ( { model
-            | parsedStatements = metaParseResult.statements
-            , genCommand = genCommand
-            , outputFileName = ReadConfig.makeOutputFileName updatedConfig (List.head fileNames |> fromJust "Output file name was not provided!")
-            , rootDir = rootDir
-            , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
-            , defaultUnionValues =
-                Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
-            , dontDeclareTypes = Set.union model.dontDeclareTypes metaParseResult.dontDeclareTypes
-            , config = updatedConfig
-          }
-        , Cmd.batch [ comms.logMessage "Parsing files...", makeCmd ResolveDependencies ]
-        )
+        Result.map2
+            (\outputFileName metaParseResult ->
+                ( { model
+                    | parsedStatements = metaParseResult.statements
+                    , genCommand = genCommand
+                    , outputFileName = outputFileName
+                    , rootDir = rootDir
+                    , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
+                    , defaultUnionValues =
+                        Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+                    , dontDeclareTypes = Set.union model.dontDeclareTypes metaParseResult.dontDeclareTypes
+                    , config = updatedConfig
+                  }
+                , Cmd.batch [ comms.logMessage "Parsing files...", makeCmd ResolveDependencies ]
+                )
+            )
+            (List.head fileNames
+                |> Result.fromMaybe "Output file name was not provided!"
+                |> Result.andThen (ReadConfig.makeOutputFileName updatedConfig)
+            )
+            metaParseResultRes
 
 
 updateAdditionalParse comms model parsedStatements fileNames genCommand =
