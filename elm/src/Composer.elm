@@ -87,13 +87,13 @@ resolveDependencies model =
                 List.filterMap (extractEncoder <| encTcName model.config.jsonModulesImports.encode) <|
                     statements
 
-        moduleName =
+        moduleNameRes =
             List.find (extractModuleDeclaration >> asFilter) statements
                 |> Maybe.andThen extractModuleDeclaration
-                |> fromJust "Module declaration not found!"
+                |> Result.fromMaybe "Module declaration not found!"
 
-        typesDict =
-            Dict.union model.typesDict <|
+        typesDictRes =
+            Result.map (Dict.union model.typesDict)
                 (makeTypesDict types)
 
         ( oldGraphHeads, oldGraph ) =
@@ -120,11 +120,13 @@ resolveDependencies model =
                 joinedGraphRes
 
         unknownTypesRes =
-            Result.map (\usedTypes -> getUnknownTypes (getWideImports statements) usedTypes (keysSet typesDict)) usedTypesRes
+            Result.map2 (\usedTypes typesDict -> getUnknownTypes (getWideImports statements) usedTypes (keysSet typesDict))
+                usedTypesRes
+                typesDictRes
 
         importsDictRes =
-            Result.map
-                (\unknownTypes ->
+            Result.map2
+                (\unknownTypes moduleName ->
                     Dict.fromList
                         [ ( moduleName
                           , Set.fromList <|
@@ -133,9 +135,10 @@ resolveDependencies model =
                         ]
                 )
                 unknownTypesRes
+                moduleNameRes
     in
-        Result.map3
-            (\( graphHeads, graph ) unknownTypes importsDict ->
+        Result.map4
+            (\( graphHeads, graph ) unknownTypes importsDict typesDict ->
                 { model
                     | typesDict = typesDict
                     , unknownTypes = unknownTypes
@@ -151,6 +154,7 @@ resolveDependencies model =
             joinedGraphRes
             unknownTypesRes
             importsDictRes
+            typesDictRes
 
 
 {-| This func calculates unknown types from types used (userDefinedTypes) minus defined types in type-def dict,
@@ -175,8 +179,8 @@ getWideImports statements =
 generate : Model -> Result String Model
 generate model =
     let
-        moduleDeclaration =
-            List.find (extractModuleDeclaration >> asFilter) model.parsedStatements |> fromJust "Cannot find module declaration!"
+        moduleDeclarationRes =
+            List.find (extractModuleDeclaration >> asFilter) model.parsedStatements |> Result.fromMaybe "Cannot find module declaration!"
 
         ( graphHeads, graph ) =
             model.dependencies
@@ -249,8 +253,8 @@ generate model =
             else
                 Ok []
     in
-        Result.map2
-            (\generatedDecoders generatedEncoders ->
+        Result.map3
+            (\generatedDecoders generatedEncoders moduleDeclaration ->
                 { model
                     | moduleDeclaration = moduleDeclaration
                     , generatedDecoders = generatedDecoders
@@ -259,6 +263,7 @@ generate model =
             )
             generatedDecodersRes
             generatedEncodersRes
+            moduleDeclarationRes
 
 
 composeFile : Model -> Result String String
@@ -306,7 +311,12 @@ printDecoders decoders =
 
 
 makeTypesDict types =
-    List.foldl (\item accumDict -> Dict.insert (getTypeNameFromStatement item) item accumDict) Dict.empty types
+    List.foldl
+        (\item ->
+            (Result.map2 (\key accum -> Dict.insert key item accum) (getTypeNameFromStatement item))
+        )
+        (Ok Dict.empty)
+        types
 
 
 makeNameMapping nameFunc types =
