@@ -177,9 +177,6 @@ printType ctx type_ =
 
 printBinOp context op arg1 arg2 =
     let
-        currentContext =
-            { context | flatList = True }
-
         rightPart op argContext arg2 =
             if isLeftAssoc op then
                 prepend (printExpression initContext op) (printExpression argContext arg2)
@@ -193,13 +190,13 @@ printBinOp context op arg1 arg2 =
                 prepend (printExpression argContext arg1) (printExpression initContext op)
     in
         if (isSimpleExpression arg2) then
-            prepend (leftPart op currentContext arg1) (rightPart op currentContext arg2)
+            prepend (leftPart op initContext arg1) (rightPart op initContext arg2)
         else
-            makeLines (leftPart op currentContext arg1) <|
-                if not currentContext.printedBinOp then
-                    Result.map (ident 1) <| rightPart op { currentContext | printedBinOp = True } arg2
+            makeLines (leftPart op initContext arg1) <|
+                if not context.printedBinOp then
+                    Result.map (ident 1) <| rightPart op { context | printedBinOp = True } arg2
                 else
-                    rightPart op { currentContext | printedBinOp = True } arg2
+                    rightPart op { context | printedBinOp = True } arg2
 
 
 printList : PrintContext -> List Expression -> Result String PrintRepr
