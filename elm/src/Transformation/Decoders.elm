@@ -215,7 +215,7 @@ decodeType ctx type_ =
                             pipeOp <|
                                 Application
                                     (variable ctx.decoderPrefix "succeed")
-                                    (variable "" <| String.repeat (List.length cons) ",")
+                                    (variable "" <| "(" ++ String.repeat (List.length cons) "," ++ ")")
                     in
                         Result.map pipelineStart <|
                             List.foldl (\item accum -> Result.map2 pipeOp (tupleFieldDec ctx item) accum) (tupleFieldDec ctx a) cons

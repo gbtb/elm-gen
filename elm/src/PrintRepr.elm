@@ -68,7 +68,7 @@ makeLines arg1 arg2 =
                             Ok <| Lines (a :: identedLines)
 
                     _ ->
-                        Err "Failed to concatenate!"
+                        Err <| "Failed to concatenate! " ++ toString ( a, b )
             )
             a
             b
@@ -91,7 +91,7 @@ infixl 5 +>
                             Ok <| Lines (a :: identedLines)
 
                     _ ->
-                        Err "Failed to concatenate!"
+                        Err "Failed to concatenate wo spaces!"
             )
             a
             b

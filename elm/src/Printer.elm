@@ -47,10 +47,11 @@ printExpression context e =
                 defaultLine <| String.join "." l
 
             Application func arg ->
-                printExpression context func
-                    +> if isSimpleExpression arg then
+                (+>)
+                    (printExpression context func)
+                    (if isSimpleExpression arg then
                         printExpression context arg
-                       else
+                     else
                         printExpression context arg
                             |> (if requireBraces arg then
                                     braces
@@ -58,6 +59,7 @@ printExpression context e =
                                     identity
                                )
                             |> Result.map (ident 1)
+                    )
 
             BinOp op arg1 arg2 ->
                 printBinOp context op arg1 arg2
@@ -189,7 +191,10 @@ printList ctx exprList =
             defaultLine "[]"
 
         [ a ] ->
-            (defaultLine "[" +> (printExpression ctx a) +> defaultLine "]")
+            if ctx.flatList then
+                (defaultLine "[" +> (printExpression ctx a) +> defaultLine "]")
+            else
+                prepend (defaultLine "[") (makeLines (printExpression ctx a) <| defaultLine "]")
 
         h :: cons ->
             if ctx.flatList then
@@ -204,7 +209,7 @@ printList ctx exprList =
                         (defaultLine "[" +> printExpression ctx h)
                         (List.map (\expr -> printExpression ctx expr |> prepend (defaultLine ",")) cons)
                     )
-                    (defaultLine "]")
+                    (Debug.log "nonflat" (defaultLine "]"))
 
 
 printTuple : PrintContext -> List Expression -> Result String PrintRepr
