@@ -17,6 +17,9 @@ import Color
 import Control
 import Control.Debounce
 import Time
+import Dom.Scroll exposing (toBottom)
+import Dom
+import Task
 
 
 main : Program Never Model Msg
@@ -43,6 +46,7 @@ type Msg
     | InputChanged String
     | OutputChanged String
     | Deb (Control.Control Msg)
+    | Scroll (Result Dom.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -56,7 +60,7 @@ update msg model =
             }
 
         addToLog model msg =
-            ( { model | messages = model.messages ++ [ msg ] }, Cmd.none )
+            ( { model | messages = model.messages ++ [ msg ] }, Task.attempt Scroll (toBottom "log") )
     in
         case msg of
             GenMessage msg ->
@@ -73,7 +77,10 @@ update msg model =
                                 ( { model | output = content }, Cmd.none )
 
                             Update.RequestFiles _ ->
-                                addToLog model (Update.ErrorMessage "Sorry, additional file's load is not working in this demo!")
+                                addToLog model
+                                    (Update.ErrorMessage
+                                        "Sorry, additional files loading is not working in this demo! Try to use console utility instead"
+                                    )
 
                     _ ->
                         let
@@ -104,10 +111,29 @@ update msg model =
             Deb msg ->
                 Control.update (\s -> { model | debState = s }) model.debState msg
 
+            Scroll _ ->
+                ( model, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
+
+
+startInput =
+    """module DependentTypes exposing (..)
+
+
+type Basic
+    = Trivial
+    | Cons1 Int
+    | Cons2 (List String)
+
+
+type alias Record =
+    { field1 : List Float
+    , field2 : Basic
+    }"""
 
 
 init : ( Model, Cmd Msg )
@@ -115,10 +141,10 @@ init =
     ( { genModel = Model.initModel
       , messages = []
       , output = ""
-      , input = ""
+      , input = startInput
       , debState = Control.initialState
       }
-    , Cmd.none
+    , makeCmd <| InputChanged startInput
     )
 
 
@@ -159,15 +185,15 @@ view model =
                     , row Log
                         [ height <| fillPortion 1, minHeight (px 200) ]
                         [ column NoStyle
-                            [ yScrollbar ]
+                            [ yScrollbar, id "log", width fill ]
                             (List.map
                                 (\msg ->
                                     case msg of
                                         Update.LogMessage str ->
-                                            row LogInfo [] [ text str ]
+                                            row LogInfo [ width fill ] [ text str ]
 
                                         Update.ErrorMessage str ->
-                                            row LogError [] [ text str ]
+                                            row LogError [ width fill ] [ text str ]
 
                                         _ ->
                                             empty
