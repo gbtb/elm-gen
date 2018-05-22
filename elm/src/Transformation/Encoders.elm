@@ -133,7 +133,16 @@ encodeUnionTypeArgs ctx name args =
                     )
                 <|
                     Result.combine <|
-                        List.map (\( type_, var ) -> Result.map (\x -> Application x var) (encodeType ctx type_)) (List.zip l <| getDummyVariables args)
+                        List.map (unionArgsMapHelper ctx) (List.zip l <| getDummyVariables args)
+
+
+unionArgsMapHelper ctx ( type_, var ) =
+    case var of
+        Tuple _ ->
+            (encodeType ctx type_)
+
+        _ ->
+            Result.map (\x -> Application x var) (encodeType ctx type_)
 
 
 genEncoderForRecord : TransformationContext -> TypeName -> Type -> Result String Expression
@@ -182,7 +191,14 @@ encodeType ctx type_ =
                                 x
                                 (variable ctx.decoderPrefix "list")
                         )
-                        (Result.map List <| Result.combine <| List.map (encodeType ctx) args)
+                        (Result.map List <|
+                            Result.combine <|
+                                List.indexedMap
+                                    (\idx type_ ->
+                                        Result.map (\x -> Application x (variable "" ("t" ++ toString (idx + 1)))) (encodeType ctx type_)
+                                    )
+                                    args
+                        )
 
         _ ->
             Err "Cannot encode this type yet?"

@@ -119,7 +119,7 @@ prepend line printRepr =
                                 Err "Incorrect PrinterRepresentation to prepend to!"
 
                     _ ->
-                        Err "Cannot prepend bunch of lines!"
+                        Err <| "Cannot prepend bunch of lines! " ++ toString line
             )
             line
             printRepr
