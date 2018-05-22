@@ -97,7 +97,7 @@ genEncoderForUnionTypeConstructor ctx cons =
                         ( if n == 0 then
                             start
                           else
-                            List.foldl (\item accum -> Application accum item) start (getDummyVariables n)
+                            List.foldl (\item accum -> Application accum item) start (getDummyVariables args)
                         , (Application (variable ctx.decoderPrefix "object")
                             (List <| [ encodedRes ])
                           )
@@ -133,7 +133,7 @@ encodeUnionTypeArgs ctx name args =
                     )
                 <|
                     Result.combine <|
-                        List.map (\( type_, var ) -> Result.map (\x -> Application x var) (encodeType ctx type_)) (List.zip l <| getDummyVariables n)
+                        List.map (\( type_, var ) -> Result.map (\x -> Application x var) (encodeType ctx type_)) (List.zip l <| getDummyVariables args)
 
 
 genEncoderForRecord : TransformationContext -> TypeName -> Type -> Result String Expression
@@ -171,12 +171,18 @@ encodeType ctx type_ =
             (encodeType ctx a)
 
         TypeTuple l ->
-            case List.reverse <| List.indexedMap (\i x -> ( i, x )) l of
+            case l of
                 [] ->
                     Err "Empty TypeTuple is not allowed!"
 
-                h :: cons ->
-                    Ok <| pipeOp (variable "" "a") (variable ctx.decoderPrefix "list")
+                args ->
+                    Result.map
+                        (\x ->
+                            pipeOp
+                                x
+                                (variable ctx.decoderPrefix "list")
+                        )
+                        (Result.map List <| Result.combine <| List.map (encodeType ctx) args)
 
         _ ->
             Err "Cannot encode this type yet?"
@@ -234,5 +240,17 @@ genEncoderForMappable ctx typeName =
         ]
 
 
-getDummyVariables n =
-    (List.range 1 n) |> List.map toString |> List.map ((++) "v") |> List.map (variable "")
+getDummyVariables args =
+    List.indexedMap
+        (\idx v ->
+            case v of
+                TypeTuple [ _ ] ->
+                    variable "" <| "v" ++ (toString (idx + 1))
+
+                TypeTuple tupleArgs ->
+                    Tuple <| List.indexedMap (\idx _ -> variable "" <| "t" ++ (toString (idx + 1))) tupleArgs
+
+                _ ->
+                    variable "" <| "v" ++ (toString (idx + 1))
+        )
+        args
