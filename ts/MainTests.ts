@@ -53,9 +53,9 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     shell.exec("./elm-gen d,e ../tests_data/Tuples.elm .");
     
     expect(
-      readFile(outPath("TuplesDecoders.elm"))
+      readFile(outPath("TuplesDecodersAndEncoders.elm"))
     ).to.equal(
-      readFile(dataPath("TuplesDecoders.elm"))
+      readFile(dataPath("TuplesDecodersAndEncoders.elm"))
     );
   });
 

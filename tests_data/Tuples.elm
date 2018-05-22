@@ -2,4 +2,4 @@ module Tuples exposing (..)
 
 
 type Coord
-    = A ( Int, Int, Int )
+    = A ( Int, Int, Int ) String

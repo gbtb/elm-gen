@@ -271,10 +271,6 @@ tupleFieldDec ctx ( index, type_ ) =
         (decodeType ctx type_)
 
 
-pipeOp =
-    BinOp (Variable [ "|>" ])
-
-
 getMapFun n =
     case n of
         1 ->

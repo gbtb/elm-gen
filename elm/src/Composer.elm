@@ -307,7 +307,7 @@ printDecoders decoders =
     if decoders == [] then
         []
     else
-        List.concatMap (\decoderDecl -> [ Ok emptyLine, Ok emptyLine ] ++ List.map printStatement (Debug.log "statement" decoderDecl)) decoders
+        List.concatMap (\decoderDecl -> [ Ok emptyLine, Ok emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
 makeTypesDict types =

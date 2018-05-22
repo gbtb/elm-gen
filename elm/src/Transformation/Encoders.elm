@@ -175,8 +175,8 @@ encodeType ctx type_ =
                 [] ->
                     Err "Empty TypeTuple is not allowed!"
 
-                _ ->
-                    Err "Not implemented yet"
+                h :: cons ->
+                    Ok <| pipeOp (variable "" "a") (variable ctx.decoderPrefix "list")
 
         _ ->
             Err "Cannot encode this type yet?"

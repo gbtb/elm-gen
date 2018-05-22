@@ -47,19 +47,34 @@ printExpression context e =
                 defaultLine <| String.join "." l
 
             Application func arg ->
-                (+>)
-                    (printExpression context func)
-                    (if isSimpleExpression arg then
-                        printExpression context arg
-                     else
-                        printExpression context arg
-                            |> (if requireBraces arg then
-                                    braces
-                                else
-                                    identity
-                               )
-                            |> Result.map (ident 1)
-                    )
+                let
+                    firstPart =
+                        (printExpression context func)
+
+                    concatOp =
+                        case firstPart of
+                            Ok (Lines _) ->
+                                makeLines
+
+                            Ok (Line _ _) ->
+                                (+>)
+
+                            _ ->
+                                (+>)
+                in
+                    concatOp
+                        firstPart
+                        (if isSimpleExpression arg then
+                            printExpression context arg
+                         else
+                            printExpression context arg
+                                |> (if requireBraces arg then
+                                        braces
+                                    else
+                                        identity
+                                   )
+                                |> Result.map (ident 1)
+                        )
 
             BinOp op arg1 arg2 ->
                 printBinOp context op arg1 arg2
@@ -209,7 +224,7 @@ printList ctx exprList =
                         (defaultLine "[" +> printExpression ctx h)
                         (List.map (\expr -> printExpression ctx expr |> prepend (defaultLine ",")) cons)
                     )
-                    (Debug.log "nonflat" (defaultLine "]"))
+                    (defaultLine "]")
 
 
 printTuple : PrintContext -> List Expression -> Result String PrintRepr
