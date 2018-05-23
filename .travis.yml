@@ -55,7 +55,7 @@ deploy:
     tag: latest
     skip_cleanup: true
   - provider: pages
-    repo: gbtb.github.io
+    repo: gbtb/gbtb.github.io
     skip-cleanup: true
     local-dir: elm/src/Demo
     github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
