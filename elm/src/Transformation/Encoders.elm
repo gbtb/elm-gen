@@ -13,52 +13,59 @@ import Model exposing (TypeName)
 import TypeName
 import Transformation.Shared exposing (..)
 import Config exposing (getEncodePrefix)
+import Result.Extra as Result
 
 
-genEncoder : TransformationContext -> Statement -> List Statement
+genEncoder : TransformationContext -> Statement -> Result String (List Statement)
 genEncoder context stmt =
     case stmt of
         TypeAliasDeclaration leftPart rightPart ->
             let
-                typeName =
+                typeNameRes =
                     getTypeName leftPart
             in
-                genEncoderHelper context leftPart rightPart (genEncoderForRecord context typeName rightPart)
+                Result.andThen (genEncoderHelper context leftPart rightPart)
+                    (Result.andThen (\typeName -> genEncoderForRecord context typeName rightPart) typeNameRes)
 
         TypeDeclaration leftPart rightPart ->
-            genEncoderHelper context leftPart rightPart (genEncoderForUnionType context stmt)
+            Result.andThen (genEncoderHelper context leftPart rightPart) (genEncoderForUnionType context stmt)
 
         _ ->
-            Debug.crash "Cannot generate decoder for this kind of statement(yet?)"
+            Err "Cannot generate decoder for this kind of statement(yet?)"
 
 
 genEncoderHelper context leftPart rightPart generatorInvocation =
     let
-        typeName =
+        typeNameRes =
             getTypeName leftPart
-
-        decoderName =
-            TypeName.getDecoderName typeName context.makeName
-
-        encoderType =
-            if String.length context.decoderPrefix > 0 then
-                [ context.decoderPrefix, "Value" ]
-            else
-                [ "Value" ]
-
-        encoderDeclaration =
-            FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
-
-        encoderBody =
-            FunctionDeclaration (decoderName) [ variable "" "value" ] <| generatorInvocation
     in
-        if Set.member typeName context.dontDeclareTypes then
-            List.singleton encoderBody
-        else
-            [ encoderDeclaration, encoderBody ]
+        Result.map
+            (\typeName ->
+                let
+                    decoderName =
+                        TypeName.getDecoderName typeName context.makeName
+
+                    encoderType =
+                        if String.length context.decoderPrefix > 0 then
+                            [ context.decoderPrefix, "Value" ]
+                        else
+                            [ "Value" ]
+
+                    encoderDeclaration =
+                        FunctionTypeDeclaration decoderName <| (TypeApplication (TypeConstructor typeName [])) (TypeConstructor encoderType [])
+
+                    encoderBody =
+                        FunctionDeclaration (decoderName) [ variable "" "value" ] <| generatorInvocation
+                in
+                    if Set.member typeName context.dontDeclareTypes then
+                        List.singleton encoderBody
+                    else
+                        [ encoderDeclaration, encoderBody ]
+            )
+            typeNameRes
 
 
-genEncoderForUnionType : TransformationContext -> Statement -> Expression
+genEncoderForUnionType : TransformationContext -> Statement -> Result String Expression
 genEncoderForUnionType ctx unionType =
     let
         begin =
@@ -66,10 +73,10 @@ genEncoderForUnionType ctx unionType =
     in
         case unionType of
             TypeDeclaration (TypeConstructor [ typeName ] []) constructors ->
-                begin <| List.map (genEncoderForUnionTypeConstructor ctx) constructors
+                Result.map begin <| Result.combine <| List.map (genEncoderForUnionTypeConstructor ctx) constructors
 
             _ ->
-                Debug.crash "It is not a union type!"
+                Err "It is not a union type!"
 
 
 genEncoderForUnionTypeConstructor ctx cons =
@@ -81,18 +88,25 @@ genEncoderForUnionTypeConstructor ctx cons =
 
                 start =
                     variable "" name
+
+                generationRes =
+                    encodeUnionTypeArgs ctx name args
             in
-                ( if n == 0 then
-                    start
-                  else
-                    List.foldl (\item accum -> Application accum item) start (getDummyVariables n)
-                , (Application (variable ctx.decoderPrefix "object")
-                    (List <| [ encodeUnionTypeArgs ctx name args ])
-                  )
-                )
+                Result.map
+                    (\encodedRes ->
+                        ( if n == 0 then
+                            start
+                          else
+                            List.foldl (\item accum -> Application accum item) start (getDummyVariables args)
+                        , (Application (variable ctx.decoderPrefix "object")
+                            (List <| [ encodedRes ])
+                          )
+                        )
+                    )
+                    generationRes
 
         _ ->
-            Debug.crash "Invalid union type constructor!"
+            Err "Invalid union type constructor!"
 
 
 encodeUnionTypeArgs ctx name args =
@@ -105,19 +119,33 @@ encodeUnionTypeArgs ctx name args =
     in
         case args of
             [] ->
-                tup <| variable ctx.decoderPrefix "null"
+                Ok <| tup <| variable ctx.decoderPrefix "null"
 
             [ a ] ->
-                tup <| Application (encodeType ctx a) (variable "" "v1")
+                Result.map (\genRes -> tup <| Application genRes (variable "" "v1")) (encodeType ctx a)
 
             l ->
-                tup <|
-                    Application (variable ctx.decoderPrefix "list") <|
-                        List <|
-                            List.map (\( type_, var ) -> Application (encodeType ctx type_) var) (List.zip l <| getDummyVariables n)
+                Result.map
+                    (\x ->
+                        tup <|
+                            Application (variable ctx.decoderPrefix "list") <|
+                                List x
+                    )
+                <|
+                    Result.combine <|
+                        List.map (unionArgsMapHelper ctx) (List.zip l <| getDummyVariables args)
 
 
-genEncoderForRecord : TransformationContext -> TypeName -> Type -> Expression
+unionArgsMapHelper ctx ( type_, var ) =
+    case var of
+        Tuple _ ->
+            (encodeType ctx type_)
+
+        _ ->
+            Result.map (\x -> Application x var) (encodeType ctx type_)
+
+
+genEncoderForRecord : TransformationContext -> TypeName -> Type -> Result String Expression
 genEncoderForRecord ctx typeName recordAst =
     let
         encodeApp =
@@ -125,13 +153,14 @@ genEncoderForRecord ctx typeName recordAst =
     in
         case recordAst of
             TypeRecord l ->
-                Application (Variable <| qualifiedName ctx.decoderPrefix "object") (List <| List.map (encodeRecordField ctx) l)
+                Result.map (Application (Variable <| qualifiedName ctx.decoderPrefix "object"))
+                    (Result.map List <| Result.combine <| List.map (encodeRecordField ctx) l)
 
             TypeConstructor _ _ ->
-                Application (encodeType ctx recordAst) (variable "" "value")
+                Result.map (\gen -> Application gen (variable "" "value")) (encodeType ctx recordAst)
 
             _ ->
-                Debug.crash "It is not a record!"
+                Err "It is not a record!"
 
 
 encodeRecordField ctx ( name, type_ ) =
@@ -139,7 +168,7 @@ encodeRecordField ctx ( name, type_ ) =
         typeEncoder ctx =
             encodeType ctx type_
     in
-        Tuple [ (String name), (Application <| typeEncoder ctx) (Access (variable "" "value") [ name ]) ]
+        Result.map (\typeEncoder -> Tuple [ (String name), (Application <| typeEncoder) (Access (variable "" "value") [ name ]) ]) (typeEncoder ctx)
 
 
 encodeType ctx type_ =
@@ -151,30 +180,36 @@ encodeType ctx type_ =
             (encodeType ctx a)
 
         TypeTuple l ->
-            case List.reverse <| List.indexedMap (\i x -> ( i, x )) l of
-                [] ->
-                    Debug.crash "Empty TypeTuple is not allowed!"
+            let
+                tupleEncoderName =
+                    ctx.makeName ("tuple" ++ (toString <| List.length l))
+            in
+                case l of
+                    [] ->
+                        Err "Empty TypeTuple is not allowed!"
 
-                _ ->
-                    Debug.crash "Op"
+                    args ->
+                        List.foldl (\type_ accum -> Result.map2 Application accum (encodeType ctx type_))
+                            (Ok <| variable "" tupleEncoderName)
+                            args
 
         _ ->
-            Debug.crash "Cannot encode this type yet?"
+            Err "Cannot encode this type yet?"
 
 
 encodeKnownTypeConstructor ctx typeName argsTypes =
     let
         firstType =
             Dict.get typeName ctx.knownTypes
-                |> fromJust ("Unknown type somehow leaked to transformation stage." ++ TypeName.toStr typeName)
-                |> Variable
+                |> Result.fromMaybe ("Unknown type somehow leaked to transformation stage." ++ TypeName.toStr typeName)
+                |> Result.map Variable
     in
         case argsTypes of
             [] ->
                 firstType
 
             l ->
-                List.foldl (\item accum -> Application accum (encodeType ctx item)) firstType l
+                List.foldl (\item accum -> Result.map2 Application accum (encodeType ctx item)) firstType l
 
 
 genMaybeEncoder conf nameFunc =
@@ -193,7 +228,7 @@ genMaybeEncoder conf nameFunc =
 genEncoderForMappable ctx typeName =
     let
         funcName =
-            ((TypeName.toLowerCaseName typeName) ++ "Encoder")
+            TypeName.getDecoderName typeName ctx.makeName
 
         value =
             TypeConstructor (qualifiedName ctx.decoderPrefix "Value") []
@@ -214,5 +249,54 @@ genEncoderForMappable ctx typeName =
         ]
 
 
-getDummyVariables n =
-    (List.range 1 n) |> List.map toString |> List.map ((++) "v") |> List.map (variable "")
+genEncoderForTuple ctx arity typeName =
+    let
+        funcName =
+            TypeName.getDecoderName typeName ctx.makeName
+
+        value =
+            TypeConstructor (qualifiedName ctx.decoderPrefix "Value") []
+
+        applicationStart =
+            TypeTuple (List.map (\i -> TypeVariable <| "a" ++ toString i) <| List.range 1 (arity + 1))
+
+        tupleArguments =
+            (List.map (\i -> variable "" <| "t" ++ toString i) <| List.range 1 (arity + 1))
+
+        tupleDestruct =
+            Tuple <| tupleArguments
+
+        encArguments =
+            (List.map (\i -> variable "" <| "e" ++ toString i) <| List.range 1 (arity + 1))
+    in
+        [ {- FunctionTypeDeclaration funcName
+             (TypeApplication
+                 (TypeApplication (TypeVariable "a")
+                     (value)
+                 )
+                 (TypeApplication (applicationStart) (value))
+             ),
+          -}
+          FunctionDeclaration funcName
+            (encArguments ++ [ tupleDestruct ])
+            (BinOp (Variable [ "|>" ])
+                (List <| List.map (\( e, t ) -> Application e t) <| List.zip encArguments tupleArguments)
+                (Variable <| qualifiedName ctx.decoderPrefix "list")
+            )
+        ]
+
+
+getDummyVariables args =
+    List.indexedMap
+        (\idx v ->
+            case v of
+                {- TypeTuple [ _ ] ->
+                       variable "" <| "v" ++ (toString (idx + 1))
+
+                   TypeTuple tupleArgs ->
+                       Tuple <| List.indexedMap (\idx _ -> variable "" <| "t" ++ (toString (idx + 1))) tupleArgs
+                -}
+                _ ->
+                    variable "" <| "v" ++ (toString (idx + 1))
+        )
+        args

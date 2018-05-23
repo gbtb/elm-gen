@@ -51,7 +51,7 @@ suite =
               <|
                 \_ ->
                     Expect.equal (makeOutputFileName initConfig "../tests_data/Test.elm")
-                        "../tests_data/Test.elm"
+                        (Ok "../tests_data/Test.elm")
             , test "make simple output file name with prefix" <|
                 \_ ->
                     Expect.equal
@@ -61,7 +61,7 @@ suite =
                             }
                             "../tests_data/Test.elm"
                         )
-                        "../tests_data/PrTest.elm"
+                        (Ok "../tests_data/PrTest.elm")
             , test "get output module name" <|
                 \_ ->
                     Expect.equal (getModuleNameFromOutputFileName "." "./Main/NewDecoders.elm")

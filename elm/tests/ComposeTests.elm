@@ -30,11 +30,12 @@ suite =
                             , TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ]))
                             ]
                         )
-                        (Dict.fromList
-                            [ ( TypeName.fromStr "A", TypeDeclaration (TypeConstructor [ "A" ] []) ([ TypeConstructor [ "A" ] [] ]) )
-                            , ( TypeName.fromStr "B", TypeDeclaration (TypeConstructor [ "B" ] []) ([ TypeConstructor [ "B" ] ([ TypeConstructor [ "A" ] [] ]) ]) )
-                            , ( TypeName.fromStr "C", TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ])) )
-                            ]
+                        (Ok <|
+                            Dict.fromList
+                                [ ( TypeName.fromStr "A", TypeDeclaration (TypeConstructor [ "A" ] []) ([ TypeConstructor [ "A" ] [] ]) )
+                                , ( TypeName.fromStr "B", TypeDeclaration (TypeConstructor [ "B" ] []) ([ TypeConstructor [ "B" ] ([ TypeConstructor [ "A" ] [] ]) ]) )
+                                , ( TypeName.fromStr "C", TypeAliasDeclaration (TypeConstructor [ "C" ] []) (TypeRecord ([ ( "field1", TypeConstructor [ "B" ] [] ), ( "field2", TypeConstructor [ "A" ] [] ) ])) )
+                                ]
                         )
             , test "can form request for files to load types declarations" <|
                 \_ ->
@@ -72,17 +73,21 @@ suite =
                 \_ ->
                     Expect.equal
                         (printImports Decoders Dict.empty Dict.empty conf)
-                        ([ Line 0 "import Json.Decode as JD", Line 0 "import Json.Decode.Pipeline as JD" ])
+                        ([ Ok <| Line 0 "import Json.Decode as JD", Ok <| Line 0 "import Json.Decode.Pipeline as JD" ])
             , test "prints correct default packages import for decoders and encoders" <|
                 \_ ->
                     Expect.equal
                         (printImports DecodersAndEncoders Dict.empty Dict.empty conf)
-                        ([ Line 0 "import Json.Decode as JD", Line 0 "import Json.Decode.Pipeline as JD", Line 0 "import Json.Encode as JE" ])
+                        ([ Ok <| Line 0 "import Json.Decode as JD"
+                         , Ok <| Line 0 "import Json.Decode.Pipeline as JD"
+                         , Ok <| Line 0 "import Json.Encode as JE"
+                         ]
+                        )
             , test "prints correct default packages import for encoders only" <|
                 \_ ->
                     Expect.equal
                         (printImports Encoders Dict.empty Dict.empty conf)
-                        ([ Line 0 "import Json.Encode as JE" ])
+                        ([ Ok <| Line 0 "import Json.Encode as JE" ])
             , test "gets unknown types correctly accounting for wide imports" <|
                 \_ ->
                     let

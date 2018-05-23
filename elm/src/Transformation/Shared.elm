@@ -61,3 +61,7 @@ initContext isDecoders prefix nameFunc userDefinedTypes d1 d2 s =
     , defaultUnionValues = d2
     , dontDeclareTypes = s
     }
+
+
+pipeOp =
+    BinOp (Variable [ "|>" ])

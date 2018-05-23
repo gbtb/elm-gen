@@ -227,4 +227,14 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('generates decoder&encoders for tuples' , () => {
+    shell.exec("./elm-gen d,e ../tests_data/Tuples.elm .");
+    
+    expect(
+      readFile(outPath("TuplesDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("TuplesDecodersAndEncoders.elm"))
+    );
+  });
+
 });

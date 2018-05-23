@@ -15,14 +15,14 @@ toStr typename =
     String.join "." typename
 
 
-toSingleName : TypeName -> String
+toSingleName : TypeName -> Result String String
 toSingleName typeName =
     case typeName of
         [ a ] ->
-            a
+            Ok a
 
         _ ->
-            Debug.crash "I expect single (not module-prefixed) type name!"
+            Err "I expect single (not module-prefixed) type name!"
 
 
 toLowerCaseName : TypeName -> String

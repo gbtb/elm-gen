@@ -3,13 +3,14 @@ module Composer exposing (..)
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
 import Transformation.Decoders exposing (genDecoder, genMaybeDecoder)
-import Transformation.Encoders exposing (genEncoder, genEncoderForMappable, genMaybeEncoder)
+import Transformation.Encoders exposing (genEncoder, genEncoderForMappable, genMaybeEncoder, genEncoderForTuple)
 import Transformation.Shared exposing (TransformationContext)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
 import Dependency exposing (..)
 import List.Extra as List
 import Maybe.Extra as Maybe
+import Result.Extra as Result
 import Set
 import Dict
 import Utils exposing (..)
@@ -30,12 +31,12 @@ type alias GenContext =
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict TypeName Expression
     , dontDeclareTypes : Set.Set TypeName
-    , generatorFunc : TransformationContext -> Statement -> List Statement
+    , generatorFunc : TransformationContext -> Statement -> Result String (List Statement)
     , prefix : String
     , makeName : String -> String
     , isDecoders : Bool
     , maybeStub : Statement
-    , mappableStubs : Dict.Dict TypeName (List Statement)
+    , premadeStatements : Dict.Dict TypeName (List Statement)
     }
 
 
@@ -45,19 +46,23 @@ makeFileLoadRequest model =
         imports =
             List.filter (extractImport >> asFilter) model.parsedStatements
 
-        ( unknownTypes, modulesDict ) =
-            List.foldl importFoldHelper ( model.unknownTypes, Dict.empty ) imports
+        importFoldRes =
+            List.foldl (\item -> Result.andThen (importFoldHelper item)) (Ok ( model.unknownTypes, Dict.empty )) imports
     in
-        if not <| Set.isEmpty unknownTypes then
-            Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList <| Set.map TypeName.toStr unknownTypes) ++ "] in import statements!"
-        else
-            Ok <| Dict.filter (\_ s -> s |> Set.isEmpty |> not) modulesDict
+        Result.andThen
+            (\( unknownTypes, modulesDict ) ->
+                if not <| Set.isEmpty unknownTypes then
+                    Err <| "Cannot find direct import(s) of type(s): [" ++ String.join ", " (Set.toList <| Set.map TypeName.toStr unknownTypes) ++ "] in import statements!"
+                else
+                    Ok <| Dict.filter (\_ s -> s |> Set.isEmpty |> not) modulesDict
+            )
+            importFoldRes
 
 
 {-| This function is designed to handle additional loading of type definitions came through fileLoadRequest
  as well as initial loading of provided input file(s)
 -}
-resolveDependencies : Model -> Model
+resolveDependencies : Model -> Result String Model
 resolveDependencies model =
     let
         firstCall =
@@ -82,47 +87,74 @@ resolveDependencies model =
                 List.filterMap (extractEncoder <| encTcName model.config.jsonModulesImports.encode) <|
                     statements
 
-        moduleName =
+        moduleNameRes =
             List.find (extractModuleDeclaration >> asFilter) statements
                 |> Maybe.andThen extractModuleDeclaration
-                |> fromJust "Module declaration not found!"
+                |> Result.fromMaybe "Module declaration not found!"
 
-        importsDict =
-            Dict.fromList [ ( moduleName, Set.fromList <| getTypes model.genCommand model.config.jsonModulesImports decoders encoders unknownTypes statements ) ]
-
-        typesDict =
-            Dict.union model.typesDict <|
+        typesDictRes =
+            Result.map (Dict.union model.typesDict)
                 (makeTypesDict types)
 
         ( oldGraphHeads, oldGraph ) =
             model.dependencies
 
-        ( newGraphHeads, newGraph ) =
+        newGraphRes =
             makeDependencyGraph (List.foldl Set.union Set.empty <| Dict.values oldGraph)
                 (knownTypes)
                 types
 
-        ( graphHeads, graph ) =
-            ( Set.union newGraphHeads oldGraphHeads, Dict.union oldGraph newGraph )
+        joinedGraphRes =
+            Result.map
+                (\( newGraphHeads, newGraph ) ->
+                    ( Set.union newGraphHeads oldGraphHeads, Dict.union oldGraph newGraph )
+                )
+                newGraphRes
 
-        usedTypes =
-            Dict.values graph
-                |> List.foldl Set.union Set.empty
+        usedTypesRes =
+            Result.map
+                (\( graphHeads, graph ) ->
+                    Dict.values graph
+                        |> List.foldl Set.union Set.empty
+                )
+                joinedGraphRes
 
-        unknownTypes =
-            getUnknownTypes (getWideImports statements) usedTypes (keysSet typesDict)
+        unknownTypesRes =
+            Result.map2 (\usedTypes typesDict -> getUnknownTypes (getWideImports statements) usedTypes (keysSet typesDict))
+                usedTypesRes
+                typesDictRes
+
+        importsDictRes =
+            Result.map2
+                (\unknownTypes moduleName ->
+                    Dict.fromList
+                        [ ( moduleName
+                          , Set.fromList <|
+                                getTypes model.genCommand model.config.jsonModulesImports decoders encoders unknownTypes statements
+                          )
+                        ]
+                )
+                unknownTypesRes
+                moduleNameRes
     in
-        { model
-            | typesDict = typesDict
-            , unknownTypes = unknownTypes
-            , dependencies = ( graphHeads, graph )
-            , newlyParsedStatements = []
-            , providedDecoders = Dict.union decoders model.providedDecoders
-            , providedEncoders = Dict.union encoders model.providedEncoders
-            , importsDict =
-                Dict.union importsDict model.importsDict
-            , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
-        }
+        Result.map4
+            (\( graphHeads, graph ) unknownTypes importsDict typesDict ->
+                { model
+                    | typesDict = typesDict
+                    , unknownTypes = unknownTypes
+                    , dependencies = ( graphHeads, graph )
+                    , newlyParsedStatements = []
+                    , providedDecoders = Dict.union decoders model.providedDecoders
+                    , providedEncoders = Dict.union encoders model.providedEncoders
+                    , importsDict =
+                        Dict.union importsDict model.importsDict
+                    , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
+                }
+            )
+            joinedGraphRes
+            unknownTypesRes
+            importsDictRes
+            typesDictRes
 
 
 {-| This func calculates unknown types from types used (userDefinedTypes) minus defined types in type-def dict,
@@ -135,7 +167,7 @@ getUnknownTypes wideImports usedTypes definedTypes =
 
         hardcodedTypes =
             Set.fromList <|
-                List.map TypeName.fromStr [ "Maybe", "List", "Array" ]
+                ((TypeName.fromStr "Maybe") :: mappableTypes ++ tuplePseudoTypes)
     in
         Set.diff parsedTypes hardcodedTypes |> Set.filter (\t -> not <| List.member (TypeName.getNamespace t) wideImports)
 
@@ -144,11 +176,11 @@ getWideImports statements =
     List.filterMap extractImportedModuleName statements |> List.map Just
 
 
-generate : Model -> Model
+generate : Model -> Result String Model
 generate model =
     let
-        moduleDeclaration =
-            List.find (extractModuleDeclaration >> asFilter) model.parsedStatements |> fromJust "Cannot find module declaration!"
+        moduleDeclarationRes =
+            List.find (extractModuleDeclaration >> asFilter) model.parsedStatements |> Result.fromMaybe "Cannot find module declaration!"
 
         ( graphHeads, graph ) =
             model.dependencies
@@ -167,61 +199,73 @@ generate model =
                 |> Set.toList
                 |> makeNameMapping (getNameFunc model.config.encodersName)
                 |> Dict.union (Dict.map (\_ v -> [ v ]) model.providedEncoders)
+
+        generatedDecodersRes =
+            if willGenDecoder model.genCommand then
+                let
+                    nameFunc =
+                        (getNameFunc model.config.decodersName)
+                in
+                    generateDecoders
+                        { typesDict = model.typesDict
+                        , graph = graph
+                        , userDefinedTypes = userDefinedTypesDecoders
+                        , excludedTypes = (keysSet model.providedDecoders)
+                        , defaultRecordValues = model.defaultRecordValues
+                        , defaultUnionValues = model.defaultUnionValues
+                        , dontDeclareTypes = model.dontDeclareTypes
+                        , generatorFunc = genDecoder
+                        , prefix = getDecodePrefix model.config.jsonModulesImports.decode
+                        , makeName = nameFunc
+                        , isDecoders = True
+                        , maybeStub = (genMaybeDecoder model.config.jsonModulesImports.decode nameFunc)
+                        , premadeStatements = Dict.empty
+                        }
+                        graphHeads
+            else
+                Ok []
+
+        generatedEncodersRes =
+            if willGenEncoder model.genCommand then
+                let
+                    nameFunc =
+                        (getNameFunc model.config.encodersName)
+                in
+                    generateDecoders
+                        { typesDict = model.typesDict
+                        , graph = graph
+                        , userDefinedTypes = (userDefinedTypesEncoders)
+                        , excludedTypes = (keysSet model.providedEncoders)
+                        , defaultRecordValues = model.defaultRecordValues
+                        , defaultUnionValues = model.defaultUnionValues
+                        , dontDeclareTypes = model.dontDeclareTypes
+                        , generatorFunc = genEncoder
+                        , prefix = getEncodePrefix model.config.jsonModulesImports.encode
+                        , makeName = nameFunc
+                        , isDecoders = False
+                        , maybeStub = (genMaybeEncoder model.config.jsonModulesImports.encode nameFunc)
+                        , premadeStatements =
+                            (premadeStatements
+                                { decoderPrefix = getEncodePrefix model.config.jsonModulesImports.encode
+                                , makeName = nameFunc
+                                }
+                            )
+                        }
+                        graphHeads
+            else
+                Ok []
     in
-        { model
-            | moduleDeclaration = moduleDeclaration
-            , generatedDecoders =
-                if willGenDecoder model.genCommand then
-                    let
-                        nameFunc =
-                            (getNameFunc model.config.decodersName)
-                    in
-                        generateDecoders
-                            { typesDict = model.typesDict
-                            , graph = graph
-                            , userDefinedTypes = userDefinedTypesDecoders
-                            , excludedTypes = (keysSet model.providedDecoders)
-                            , defaultRecordValues = model.defaultRecordValues
-                            , defaultUnionValues = model.defaultUnionValues
-                            , dontDeclareTypes = model.dontDeclareTypes
-                            , generatorFunc = genDecoder
-                            , prefix = getDecodePrefix model.config.jsonModulesImports.decode
-                            , makeName = nameFunc
-                            , isDecoders = True
-                            , maybeStub = (genMaybeDecoder model.config.jsonModulesImports.decode nameFunc)
-                            , mappableStubs = Dict.empty
-                            }
-                            graphHeads
-                else
-                    []
-            , generatedEncoders =
-                if willGenEncoder model.genCommand then
-                    let
-                        nameFunc =
-                            (getNameFunc model.config.encodersName)
-                    in
-                        generateDecoders
-                            { typesDict = model.typesDict
-                            , graph = graph
-                            , userDefinedTypes = (userDefinedTypesEncoders)
-                            , excludedTypes = (keysSet model.providedEncoders)
-                            , defaultRecordValues = model.defaultRecordValues
-                            , defaultUnionValues = model.defaultUnionValues
-                            , dontDeclareTypes = model.dontDeclareTypes
-                            , generatorFunc = genEncoder
-                            , prefix = getEncodePrefix model.config.jsonModulesImports.encode
-                            , makeName = nameFunc
-                            , isDecoders = False
-                            , maybeStub = (genMaybeEncoder model.config.jsonModulesImports.encode nameFunc)
-                            , mappableStubs =
-                                (mappableStubs
-                                    { decoderPrefix = getEncodePrefix model.config.jsonModulesImports.encode }
-                                )
-                            }
-                            graphHeads
-                else
-                    []
-        }
+        Result.map3
+            (\generatedDecoders generatedEncoders moduleDeclaration ->
+                { model
+                    | moduleDeclaration = moduleDeclaration
+                    , generatedDecoders = generatedDecoders
+                    , generatedEncoders = generatedEncoders
+                }
+            )
+            generatedDecodersRes
+            generatedEncodersRes
+            moduleDeclarationRes
 
 
 composeFile : Model -> Result String String
@@ -245,17 +289,18 @@ composeFile model =
                                 )
                     )
     in
-        Result.map
+        Result.andThen
             (\moduleDeclaration ->
-                String.join "\n" <|
-                    List.map (produceString 4) <|
-                        [ printStatement <| ModuleDeclaration moduleDeclaration AllExport
-                        , emptyLine
-                        ]
-                            ++ printImports model.genCommand model.importsDict model.typesDict model.config.jsonModulesImports
-                            ++ (printDecoders model.generatedDecoders)
-                            ++ (printDecoders model.generatedEncoders)
-                            ++ [ emptyLine ]
+                Result.map (String.join "\n") <|
+                    Result.combine <|
+                        List.map (Result.map <| produceString 4) <|
+                            [ printStatement <| ModuleDeclaration moduleDeclaration AllExport
+                            , Ok <| emptyLine
+                            ]
+                                ++ printImports model.genCommand model.importsDict model.typesDict model.config.jsonModulesImports
+                                ++ (printDecoders model.generatedDecoders)
+                                ++ (printDecoders model.generatedEncoders)
+                                ++ [ Ok <| emptyLine ]
             )
             moduleDeclaration
 
@@ -264,11 +309,16 @@ printDecoders decoders =
     if decoders == [] then
         []
     else
-        List.concatMap (\decoderDecl -> [ emptyLine, emptyLine ] ++ List.map printStatement decoderDecl) decoders
+        List.concatMap (\decoderDecl -> [ Ok emptyLine, Ok emptyLine ] ++ List.map printStatement decoderDecl) decoders
 
 
 makeTypesDict types =
-    List.foldl (\item accumDict -> Dict.insert (getTypeNameFromStatement item) item accumDict) Dict.empty types
+    List.foldl
+        (\item ->
+            (Result.map2 (\key accum -> Dict.insert key item accum) (getTypeNameFromStatement item))
+        )
+        (Ok Dict.empty)
+        types
 
 
 makeNameMapping nameFunc types =
@@ -280,22 +330,22 @@ generateDecoders genContext graphHeads =
         excludeTypes =
             Set.union genContext.excludedTypes <|
                 if genContext.isDecoders then
-                    (Set.fromList [ TypeName.fromStr "List", TypeName.fromStr "Array" ])
+                    (Set.fromList <| mappableTypes ++ tuplePseudoTypes)
                 else
                     Set.empty
 
         typesList =
             Set.toList <| setdiff excludeTypes <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
     in
-        List.map (generateDecodersHelper genContext) typesList |> Maybe.values
+        List.map (generateDecodersHelper genContext) typesList |> Result.combine
 
 
-generateDecodersHelper : GenContext -> TypeName -> Maybe (List Statement)
+generateDecodersHelper : GenContext -> TypeName -> Result String (List Statement)
 generateDecodersHelper genContext item =
     if item == TypeName.fromStr "Maybe" then
-        Just [ genContext.maybeStub ]
+        Ok [ genContext.maybeStub ]
     else
-        Maybe.orLazy (Dict.get item genContext.mappableStubs)
+        Result.orLazy (Dict.get item genContext.premadeStatements |> Result.fromMaybe "Mappable stub not found")
             (\_ ->
                 let
                     typeDeclaration =
@@ -303,21 +353,20 @@ generateDecodersHelper genContext item =
                 in
                     case typeDeclaration of
                         Just stmt ->
-                            Just <|
-                                genContext.generatorFunc
-                                    (Transformation.Shared.initContext
-                                        genContext.isDecoders
-                                        genContext.prefix
-                                        genContext.makeName
-                                        genContext.userDefinedTypes
-                                        genContext.defaultRecordValues
-                                        genContext.defaultUnionValues
-                                        genContext.dontDeclareTypes
-                                    )
-                                    stmt
+                            genContext.generatorFunc
+                                (Transformation.Shared.initContext
+                                    genContext.isDecoders
+                                    genContext.prefix
+                                    genContext.makeName
+                                    genContext.userDefinedTypes
+                                    genContext.defaultRecordValues
+                                    genContext.defaultUnionValues
+                                    genContext.dontDeclareTypes
+                                )
+                                stmt
 
                         Nothing ->
-                            Debug.crash ("Type not found in types dict! " ++ (TypeName.toStr item) ++ (toString genContext.mappableStubs))
+                            Err ("Type not found in types dict! " ++ (TypeName.toStr item) ++ " | " ++ (toString genContext.premadeStatements))
             )
 
 
@@ -360,7 +409,13 @@ mappableTypes =
     List.map TypeName.fromStr [ "List", "Array" ]
 
 
-mappableStubs ctx =
+tuplePseudoTypes =
+    List.indexedMap (\idx v -> TypeName.fromStr <| "Tuple" ++ (toString <| idx + 1)) (List.repeat 10 1)
+
+
+premadeStatements ctx =
     Dict.fromList <|
-        List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
+        (List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
             mappableTypes
+        )
+            ++ List.indexedMap (\idx t -> ( t, genEncoderForTuple ctx idx t )) (tuplePseudoTypes)
