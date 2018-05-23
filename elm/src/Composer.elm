@@ -208,7 +208,7 @@ generate model =
                 in
                     generateDecoders
                         { typesDict = model.typesDict
-                        , graph = Debug.log "g" graph
+                        , graph = graph
                         , userDefinedTypes = userDefinedTypesDecoders
                         , excludedTypes = (keysSet model.providedDecoders)
                         , defaultRecordValues = model.defaultRecordValues

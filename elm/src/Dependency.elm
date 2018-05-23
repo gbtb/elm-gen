@@ -24,7 +24,7 @@ makeDependencyGraph nonHeads knownTypes statements =
         res =
             List.foldl (graphHelper knownTypes) (Ok ( nonHeads, Dict.empty )) statements
     in
-        Debug.log "g_inner" <| Result.map (\( nonHeads_, graph ) -> ( Set.diff (Set.fromList <| Dict.keys graph) nonHeads_, graph )) res
+        Result.map (\( nonHeads_, graph ) -> ( Set.diff (Set.fromList <| Dict.keys graph) nonHeads_, graph )) res
 
 
 

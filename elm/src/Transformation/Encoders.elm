@@ -182,14 +182,16 @@ encodeType ctx type_ =
         TypeTuple l ->
             let
                 tupleEncoderName =
-                    ctx.makeName ("Tuple2")
+                    ctx.makeName ("tuple" ++ (toString <| List.length l))
             in
                 case l of
                     [] ->
                         Err "Empty TypeTuple is not allowed!"
 
                     args ->
-                        List.foldl (\type_ accum -> Result.map2 Application accum (encodeType ctx type_)) (Ok <| variable "" "v1") args
+                        List.foldl (\type_ accum -> Result.map2 Application accum (encodeType ctx type_))
+                            (Ok <| variable "" tupleEncoderName)
+                            args
 
         _ ->
             Err "Cannot encode this type yet?"
@@ -288,12 +290,12 @@ getDummyVariables args =
     List.indexedMap
         (\idx v ->
             case v of
-                TypeTuple [ _ ] ->
-                    variable "" <| "v" ++ (toString (idx + 1))
+                {- TypeTuple [ _ ] ->
+                       variable "" <| "v" ++ (toString (idx + 1))
 
-                TypeTuple tupleArgs ->
-                    Tuple <| List.indexedMap (\idx _ -> variable "" <| "t" ++ (toString (idx + 1))) tupleArgs
-
+                   TypeTuple tupleArgs ->
+                       Tuple <| List.indexedMap (\idx _ -> variable "" <| "t" ++ (toString (idx + 1))) tupleArgs
+                -}
                 _ ->
                     variable "" <| "v" ++ (toString (idx + 1))
         )

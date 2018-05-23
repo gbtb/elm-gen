@@ -34,12 +34,13 @@ suite =
                 \_ ->
                     Expect.equal (JD.decodeString cDecoder "{\"Cons2\": [\"hello\", 1, 2.5]}")
                         (Ok (Cons2 "hello" 1 2.5))
-            , test "get dummy variables for tuples" <|
-                \_ ->
-                    let
-                        args =
-                            [ TypeTuple ([ TypeConstructor [ "Int" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "String" ] [] ]
-                    in
-                        Expect.equal (getDummyVariables args)
-                            ([ Tuple ([ Variable [ "t1" ], Variable [ "t2" ], Variable [ "t3" ] ]), Variable [ "v2" ] ])
+              {- , test "get dummy variables for tuples" <|
+                 \_ ->
+                     let
+                         args =
+                             [ TypeTuple ([ TypeConstructor [ "Int" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "String" ] [] ]
+                     in
+                         Expect.equal (getDummyVariables args)
+                             ([ Tuple ([ Variable [ "t1" ], Variable [ "t2" ], Variable [ "t3" ] ]), Variable [ "v2" ] ])
+              -}
             ]
