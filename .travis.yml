@@ -41,7 +41,7 @@ script:
   - ../node_modules/elm-test/bin/elm-test
   - cd ..
   - npm test
-  - cd Demo
+  - cd elm/src/Demo
   - elm-make Main.elm
 
 deploy:
