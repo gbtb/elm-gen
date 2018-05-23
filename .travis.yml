@@ -41,6 +41,8 @@ script:
   - ../node_modules/elm-test/bin/elm-test
   - cd ..
   - npm test
+  - cd Demo
+  - elm-make Main.elm
 
 deploy:
   provider: npm

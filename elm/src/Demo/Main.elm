@@ -14,6 +14,7 @@ import Style.Color as Color
 import Style.Scale as Scale
 import Style.Shadow as Shadow
 import Color
+import Color.Convert as Color
 import Control
 import Control.Debounce
 import Time
@@ -159,32 +160,46 @@ text =
 
 view model =
     viewport (styles)
-        (column NoStyle
+        (column Main
             [ minHeight (percent 95), spacingXY 0 20 ]
-            [ header Header [ height (px 50), paddingXY 20 0 ] (el NoStyle [ center, verticalCenter ] (text "elm-gen demo"))
+            [ header Header
+                [ height (px 50), paddingXY 20 0 ]
+                (row NoStyle
+                    [ center, verticalCenter, spacingXY 20 0, width fill ]
+                    [ h1 NoStyle [] <| text "elm-gen demo"
+                    , link "https://github.com/gbtb/elm-gen" <|
+                        image NoStyle
+                            [ width (px <| scaled 2), height (px <| scaled 2) ]
+                            { src =
+                                "https://yodlabs.gallerycdn.vsassets.io/extensions/yodlabs/"
+                                    ++ "yodlabs-githubstats/0.9.10/1499287006645/branding/logo.png"
+                            , caption = "github logo"
+                            }
+                    ]
+                )
             , mainContent MainContent
                 []
                 (column NoStyle
                     [ paddingXY 20 0, spacing 20, minHeight fill ]
                     [ row NoStyle
-                        [ height <| fillPortion 3, spacingXY 40 20, clip ]
+                        [ height <| fillPortion 3, spacingXY 40 20 ]
                         [ multiline InputArea
                             [ height fill, yScrollbar, paddingXY 2 2 ]
                             { onChange = debounce << InputChanged
                             , value = model.input
-                            , label = labelAbove (text "Input file content")
+                            , label = labelAbove (h2 H2 [ center ] <| text "Input file content")
                             , options = [ focusOnLoad ]
                             }
                         , multiline OutputArea
                             [ height fill, yScrollbar, paddingXY 2 2 ]
                             { onChange = OutputChanged
                             , value = model.output
-                            , label = labelAbove (text "Output file content")
+                            , label = labelAbove (h2 H2 [ center ] <| text "Output file content")
                             , options = []
                             }
                         ]
                     , row Log
-                        [ height <| fillPortion 1, minHeight (px 200) ]
+                        [ height <| fillPortion 1, minHeight (px 200), paddingXY 2 2 ]
                         [ column NoStyle
                             [ yScrollbar, id "log", width fill ]
                             (List.map
@@ -208,6 +223,15 @@ view model =
         )
 
 
+colors =
+    { cyan = Color.hexToColor "#60b5cc" |> Result.withDefault Color.red
+    , orange = Color.hexToColor "#f0ad00" |> Result.withDefault Color.red
+    , blue = Color.hexToColor "#5a6378" |> Result.withDefault Color.red
+    , red = Color.hexToColor "#ef4a0e" |> Result.withDefault Color.red
+    , green = Color.hexToColor "#7fd13b" |> Result.withDefault Color.red
+    }
+
+
 type Styles
     = NoStyle
     | Header
@@ -218,32 +242,50 @@ type Styles
     | Log
     | LogError
     | LogInfo
+    | H2
+    | Main
 
 
 styles =
     styleSheet
         [ style LogInfo
-            [ Color.text Color.green ]
-        , style InputArea
-            [ Shadow.simple
-            , focus
-                [ Shadow.simple ]
+            [ Color.text colors.green ]
+        , style Main
+            [ Font.typeface [ Font.importUrl { url = "https://fonts.googleapis.com/css?family=Roboto", name = "Roboto" }, Font.serif ]
+            , Color.text <| Color.rgba 0 0 0 0.8
             ]
-        , style OutputArea
-            [ Shadow.simple
-            , focus [ Shadow.simple ]
-            ]
+        , style InputArea inputAreaSnippet
+        , style OutputArea inputAreaSnippet
         , style LogError
-            [ Color.text Color.red ]
+            [ Color.text colors.red ]
         , style Log
             [ Shadow.simple
+            , Color.background colors.blue
             ]
         , style Header
             [ Font.size (scaled 2)
             , Shadow.simple
+            , Color.background colors.cyan
+            ]
+        , style H2
+            [ Font.bold
             ]
         , importUrl "https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.css"
         ]
+
+
+borderSnippet =
+    [ Shadow.box { offset = ( 0, 0 ), blur = 6.0, size = 2, color = colors.blue }
+    ]
+
+
+inputAreaSnippet =
+    [ Shadow.simple
+    , focus <| [ Shadow.simple ] ++ borderSnippet
+    , Font.typeface [ Font.monospace ]
+    , Font.size (scaled 1)
+    ]
+        ++ borderSnippet
 
 
 scaled =
