@@ -180,12 +180,16 @@ encodeType ctx type_ =
             (encodeType ctx a)
 
         TypeTuple l ->
-            case l of
-                [] ->
-                    Err "Empty TypeTuple is not allowed!"
+            let
+                tupleEncoderName =
+                    ctx.makeName ("Tuple2")
+            in
+                case l of
+                    [] ->
+                        Err "Empty TypeTuple is not allowed!"
 
-                args ->
-                    List.foldl (\type_ accum -> Result.map2 Application accum (encodeType ctx type_)) (Ok <| variable "" "v1") args
+                    args ->
+                        List.foldl (\type_ accum -> Result.map2 Application accum (encodeType ctx type_)) (Ok <| variable "" "v1") args
 
         _ ->
             Err "Cannot encode this type yet?"
@@ -222,7 +226,7 @@ genMaybeEncoder conf nameFunc =
 genEncoderForMappable ctx typeName =
     let
         funcName =
-            ((TypeName.toLowerCaseName typeName) ++ "Encoder")
+            TypeName.getDecoderName typeName ctx.makeName
 
         value =
             TypeConstructor (qualifiedName ctx.decoderPrefix "Value") []
