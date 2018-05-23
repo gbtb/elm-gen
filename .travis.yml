@@ -41,9 +41,10 @@ script:
   - ../node_modules/elm-test/bin/elm-test
   - cd ..
   - npm test
-  - cd elm/src/Demo
-  - elm-make Main.elm
-  - cd ../../..
+  - cd elm/src
+  - elm-make Demo/Main.elm
+  - mv index.html Demo
+  - cd ../..
 
 deploy:
   - provider: npm
