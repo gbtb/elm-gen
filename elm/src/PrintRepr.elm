@@ -91,7 +91,7 @@ infixl 5 +>
                             Ok <| Lines (a :: identedLines)
 
                     _ ->
-                        Err "Failed to concatenate wo spaces!"
+                        Err <| "Failed to concatenate wo spaces! " ++ toString a ++ " | " ++ toString b
             )
             a
             b

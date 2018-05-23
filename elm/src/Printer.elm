@@ -20,6 +20,7 @@ type alias PrintContext =
     { printedBinOp : Bool
     , flatList : Bool
     , nestedTypeApplication : Bool
+    , nestedList : Bool
     }
 
 
@@ -27,6 +28,7 @@ initContext =
     { printedBinOp = False
     , flatList = False
     , nestedTypeApplication = False
+    , nestedList = False
     }
 
 
@@ -188,57 +190,80 @@ printBinOp context op arg1 arg2 =
                 (printExpression argContext arg1)
             else
                 prepend (printExpression argContext arg1) (printExpression initContext op)
-    in
-        if (isSimpleExpression arg2) then
-            prepend (leftPart op initContext arg1) (rightPart op initContext arg2)
-        else
+
+        lines =
             makeLines (leftPart op initContext arg1) <|
                 if not context.printedBinOp then
                     Result.map (ident 1) <| rightPart op { context | printedBinOp = True } arg2
                 else
                     rightPart op { context | printedBinOp = True } arg2
+    in
+        if (isSimpleExpression arg2) then
+            prepend (leftPart op context arg1) (rightPart op initContext arg2) |> Result.orElseLazy (\_ -> lines)
+        else
+            lines
 
 
 printList : PrintContext -> List Expression -> Result String PrintRepr
 printList ctx exprList =
-    case exprList of
-        [] ->
-            defaultLine "[]"
-
-        [ a ] ->
-            if ctx.flatList then
-                (defaultLine "[" +> (printExpression ctx a) +> defaultLine "]")
-            else
-                prepend (defaultLine "[") (makeLines (printExpression ctx a) <| defaultLine "]")
-
-        h :: cons ->
-            if ctx.flatList then
-                (List.foldl (\accum item -> item :> accum)
+    let
+        lines h cons =
+            makeLines
+                (List.foldl (\accum item -> makeLines item accum)
                     (defaultLine "[" +> printExpression ctx h)
-                    (List.map (\expr -> (defaultLine ",") +> printExpression ctx expr) cons)
+                    (List.map (\expr -> printExpression ctx expr |> prepend (defaultLine ",")) cons)
                 )
-                    +> (defaultLine "]")
-            else
-                makeLines
-                    (List.foldl (\accum item -> makeLines item accum)
+                (defaultLine "]")
+    in
+        case exprList of
+            [] ->
+                defaultLine "[]"
+
+            [ a ] ->
+                (defaultLine "[" +> (printExpression ctx a) +> defaultLine "]")
+                    |> Result.orElseLazy
+                        (\_ -> prepend (defaultLine "[") (makeLines (printExpression ctx a) <| defaultLine "]"))
+
+            h :: cons ->
+                if ctx.flatList then
+                    (List.foldl (\accum item -> item :> accum)
                         (defaultLine "[" +> printExpression ctx h)
-                        (List.map (\expr -> printExpression ctx expr |> prepend (defaultLine ",")) cons)
+                        (List.map (\expr -> (defaultLine ",") +> printExpression ctx expr) cons)
                     )
-                    (defaultLine "]")
+                        +> (defaultLine "]")
+                        |> Result.orElseLazy (\_ -> lines h cons)
+                else
+                    lines h cons
 
 
 printTuple : PrintContext -> List Expression -> Result String PrintRepr
 printTuple ctx exprList =
-    case exprList of
-        [] ->
-            defaultLine "()"
+    let
+        nestedList ctx =
+            { ctx | nestedList = True }
 
-        h :: cons ->
-            (List.foldl (\accum item -> item :> accum)
-                (defaultLine "(" +> printExpression ctx h)
-                (List.map (\expr -> printExpression { ctx | flatList = True } expr |> prepend (defaultLine ",")) cons)
-            )
-                +> (defaultLine ")")
+        flatList ctx =
+            { ctx | flatList = True }
+    in
+        case exprList of
+            [] ->
+                defaultLine "()"
+
+            h :: cons ->
+                (List.foldl (\accum item -> item :> accum)
+                    (defaultLine "(" +> printExpression (nestedList ctx) h)
+                    (List.map (\expr -> printExpression (nestedList <| flatList ctx) expr |> prepend (defaultLine ",")) cons)
+                )
+                    +> (defaultLine ")")
+                    |> Result.orElseLazy
+                        (\_ ->
+                            makeLines
+                                (List.foldl (\accum item -> item :> accum)
+                                    (defaultLine "(" +> printExpression (nestedList ctx) h)
+                                    (List.map (\expr -> printExpression (nestedList <| flatList ctx) expr |> prepend (defaultLine ",")) cons)
+                                )
+                                (defaultLine ")")
+                        )
 
 
 printCaseBranch ctx ( leftPart, rightPart ) =
