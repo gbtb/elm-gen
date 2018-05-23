@@ -213,7 +213,7 @@ printList ctx exprList =
         lines h cons =
             makeLines
                 (List.foldl (\accum item -> makeLines item accum)
-                    (defaultLine "[" +> printExpression (nestedList ctx) h)
+                    (prepend (defaultLine "[") <| printExpression (nestedList ctx) h)
                     (List.map (\expr -> printExpression (nestedList ctx) expr |> prepend (defaultLine ",")) cons)
                 )
                 (defaultLine "]")
@@ -230,7 +230,7 @@ printList ctx exprList =
             h :: cons ->
                 if ctx.flatList {- && not ctx.nestedList -} then
                     (List.foldl (\accum item -> item :> accum)
-                        (defaultLine "[" +> printExpression (nestedList ctx) h)
+                        (prepend (defaultLine "[") <| printExpression (nestedList ctx) h)
                         (List.map (\expr -> (defaultLine ",") +> printExpression (nestedList ctx) expr) cons)
                     )
                         +> (defaultLine "]")
