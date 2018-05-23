@@ -207,11 +207,14 @@ printBinOp context op arg1 arg2 =
 printList : PrintContext -> List Expression -> Result String PrintRepr
 printList ctx exprList =
     let
+        nestedList ctx =
+            { ctx | nestedList = False }
+
         lines h cons =
             makeLines
                 (List.foldl (\accum item -> makeLines item accum)
-                    (defaultLine "[" +> printExpression ctx h)
-                    (List.map (\expr -> printExpression ctx expr |> prepend (defaultLine ",")) cons)
+                    (defaultLine "[" +> printExpression (nestedList ctx) h)
+                    (List.map (\expr -> printExpression (nestedList ctx) expr |> prepend (defaultLine ",")) cons)
                 )
                 (defaultLine "]")
     in
@@ -220,15 +223,15 @@ printList ctx exprList =
                 defaultLine "[]"
 
             [ a ] ->
-                (defaultLine "[" +> (printExpression ctx a) +> defaultLine "]")
+                (defaultLine "[" +> (printExpression (nestedList ctx) a) +> defaultLine "]")
                     |> Result.orElseLazy
-                        (\_ -> prepend (defaultLine "[") (makeLines (printExpression ctx a) <| defaultLine "]"))
+                        (\_ -> prepend (defaultLine "[") (makeLines (printExpression (nestedList ctx) a) <| defaultLine "]"))
 
             h :: cons ->
-                if ctx.flatList then
+                if ctx.flatList {- && not ctx.nestedList -} then
                     (List.foldl (\accum item -> item :> accum)
-                        (defaultLine "[" +> printExpression ctx h)
-                        (List.map (\expr -> (defaultLine ",") +> printExpression ctx expr) cons)
+                        (defaultLine "[" +> printExpression (nestedList ctx) h)
+                        (List.map (\expr -> (defaultLine ",") +> printExpression (nestedList ctx) expr) cons)
                     )
                         +> (defaultLine "]")
                         |> Result.orElseLazy (\_ -> lines h cons)
