@@ -43,12 +43,20 @@ script:
   - npm test
   - cd elm/src/Demo
   - elm-make Main.elm
+  - cd ../../..
 
 deploy:
-  provider: npm
-  email: $EMAIL
-  api_key: $NPM_API_KEY
-  on:
-    branch: master
-  tag: latest
-  skip_cleanup: true
+  - provider: npm
+    email: $EMAIL
+    api_key: $NPM_API_KEY
+    on:
+      branch: master
+    tag: latest
+    skip_cleanup: true
+  - provider: pages
+    skip-cleanup: true
+    local-dir: elm/src/Demo
+    github-token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
+    #keep-history: true
+    on:
+      branch: master
