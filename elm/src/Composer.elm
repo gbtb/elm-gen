@@ -3,7 +3,7 @@ module Composer exposing (..)
 import Ast.Statement exposing (..)
 import Ast.Expression exposing (..)
 import Transformation.Decoders exposing (genDecoder, genMaybeDecoder)
-import Transformation.Encoders exposing (genEncoder, genEncoderForMappable, genMaybeEncoder)
+import Transformation.Encoders exposing (genEncoder, genEncoderForMappable, genMaybeEncoder, genEncoderForTuple)
 import Transformation.Shared exposing (TransformationContext)
 import Printer exposing (printStatement)
 import PrintRepr exposing (PrintRepr(..), produceString, (+>))
@@ -36,7 +36,7 @@ type alias GenContext =
     , makeName : String -> String
     , isDecoders : Bool
     , maybeStub : Statement
-    , mappableStubs : Dict.Dict TypeName (List Statement)
+    , premadeStatements : Dict.Dict TypeName (List Statement)
     }
 
 
@@ -167,7 +167,7 @@ getUnknownTypes wideImports usedTypes definedTypes =
 
         hardcodedTypes =
             Set.fromList <|
-                List.map TypeName.fromStr [ "Maybe", "List", "Array" ]
+                ((TypeName.fromStr "Maybe") :: mappableTypes ++ tuplePseudoTypes)
     in
         Set.diff parsedTypes hardcodedTypes |> Set.filter (\t -> not <| List.member (TypeName.getNamespace t) wideImports)
 
@@ -208,7 +208,7 @@ generate model =
                 in
                     generateDecoders
                         { typesDict = model.typesDict
-                        , graph = graph
+                        , graph = Debug.log "g" graph
                         , userDefinedTypes = userDefinedTypesDecoders
                         , excludedTypes = (keysSet model.providedDecoders)
                         , defaultRecordValues = model.defaultRecordValues
@@ -219,7 +219,7 @@ generate model =
                         , makeName = nameFunc
                         , isDecoders = True
                         , maybeStub = (genMaybeDecoder model.config.jsonModulesImports.decode nameFunc)
-                        , mappableStubs = Dict.empty
+                        , premadeStatements = Dict.empty
                         }
                         graphHeads
             else
@@ -244,9 +244,11 @@ generate model =
                         , makeName = nameFunc
                         , isDecoders = False
                         , maybeStub = (genMaybeEncoder model.config.jsonModulesImports.encode nameFunc)
-                        , mappableStubs =
-                            (mappableStubs
-                                { decoderPrefix = getEncodePrefix model.config.jsonModulesImports.encode }
+                        , premadeStatements =
+                            (premadeStatements
+                                { decoderPrefix = getEncodePrefix model.config.jsonModulesImports.encode
+                                , makeName = nameFunc
+                                }
                             )
                         }
                         graphHeads
@@ -328,7 +330,7 @@ generateDecoders genContext graphHeads =
         excludeTypes =
             Set.union genContext.excludedTypes <|
                 if genContext.isDecoders then
-                    (Set.fromList [ TypeName.fromStr "List", TypeName.fromStr "Array" ])
+                    (Set.fromList <| mappableTypes ++ tuplePseudoTypes)
                 else
                     Set.empty
 
@@ -343,7 +345,7 @@ generateDecodersHelper genContext item =
     if item == TypeName.fromStr "Maybe" then
         Ok [ genContext.maybeStub ]
     else
-        Result.orLazy (Dict.get item genContext.mappableStubs |> Result.fromMaybe "Mappable stub not found")
+        Result.orLazy (Dict.get item genContext.premadeStatements |> Result.fromMaybe "Mappable stub not found")
             (\_ ->
                 let
                     typeDeclaration =
@@ -364,7 +366,7 @@ generateDecodersHelper genContext item =
                                 stmt
 
                         Nothing ->
-                            Err ("Type not found in types dict! " ++ (TypeName.toStr item) ++ (toString genContext.mappableStubs))
+                            Err ("Type not found in types dict! " ++ (TypeName.toStr item) ++ " | " ++ (toString genContext.premadeStatements))
             )
 
 
@@ -407,7 +409,13 @@ mappableTypes =
     List.map TypeName.fromStr [ "List", "Array" ]
 
 
-mappableStubs ctx =
+tuplePseudoTypes =
+    List.indexedMap (\idx v -> TypeName.fromStr <| "Tuple" ++ (toString <| idx + 1)) (List.repeat 10 1)
+
+
+premadeStatements ctx =
     Dict.fromList <|
-        List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
+        (List.map (\i -> ( i, genEncoderForMappable ctx i )) <|
             mappableTypes
+        )
+            ++ List.indexedMap (\idx t -> ( t, genEncoderForTuple ctx idx t )) (tuplePseudoTypes)

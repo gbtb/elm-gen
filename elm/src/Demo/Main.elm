@@ -92,6 +92,7 @@ update msg model =
             InputChanged str ->
                 ( { model
                     | input = str
+                    , output = ""
                     , genModel = Model.initModel
                   }
                 , makeCmd

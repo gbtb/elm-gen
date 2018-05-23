@@ -185,20 +185,7 @@ encodeType ctx type_ =
                     Err "Empty TypeTuple is not allowed!"
 
                 args ->
-                    Result.map
-                        (\x ->
-                            pipeOp
-                                x
-                                (variable ctx.decoderPrefix "list")
-                        )
-                        (Result.map List <|
-                            Result.combine <|
-                                List.indexedMap
-                                    (\idx type_ ->
-                                        Result.map (\x -> Application x (variable "" ("t" ++ toString (idx + 1)))) (encodeType ctx type_)
-                                    )
-                                    args
-                        )
+                    List.foldl (\type_ accum -> Result.map2 Application accum (encodeType ctx type_)) (Ok <| variable "" "v1") args
 
         _ ->
             Err "Cannot encode this type yet?"
@@ -252,6 +239,43 @@ genEncoderForMappable ctx typeName =
             (BinOp (Variable [ "<|" ])
                 (variable ctx.decoderPrefix (TypeName.toLowerCaseName typeName))
                 (Application (Application (Access (Variable typeName) [ "map" ]) (Variable [ "encoder" ])) (Variable [ "value" ]))
+            )
+        ]
+
+
+genEncoderForTuple ctx arity typeName =
+    let
+        funcName =
+            TypeName.getDecoderName typeName ctx.makeName
+
+        value =
+            TypeConstructor (qualifiedName ctx.decoderPrefix "Value") []
+
+        applicationStart =
+            TypeTuple (List.map (\i -> TypeVariable <| "a" ++ toString i) <| List.range 1 (arity + 1))
+
+        tupleArguments =
+            (List.map (\i -> variable "" <| "t" ++ toString i) <| List.range 1 (arity + 1))
+
+        tupleDestruct =
+            Tuple <| tupleArguments
+
+        encArguments =
+            (List.map (\i -> variable "" <| "e" ++ toString i) <| List.range 1 (arity + 1))
+    in
+        [ {- FunctionTypeDeclaration funcName
+             (TypeApplication
+                 (TypeApplication (TypeVariable "a")
+                     (value)
+                 )
+                 (TypeApplication (applicationStart) (value))
+             ),
+          -}
+          FunctionDeclaration funcName
+            (encArguments ++ [ tupleDestruct ])
+            (BinOp (Variable [ "|>" ])
+                (List <| List.map (\( e, t ) -> Application e t) <| List.zip encArguments tupleArguments)
+                (Variable <| qualifiedName ctx.decoderPrefix "list")
             )
         ]
 

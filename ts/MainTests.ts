@@ -47,7 +47,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     expect(ret.stdout).to.contain("Printing...");
   });
 
-  it('for simple dependent types' , () => {
+  /*it('for simple dependent types' , () => {
     shell.exec("./elm-gen d ../tests_data/DependentTypes.elm . ");
     expect(
       readFile(outPath("DependentTypesDecoders.elm"))
@@ -225,7 +225,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     ).to.equal(
       readFile(dataPath("AliasDecodersAndEncoders.elm"))
     );
-  });
+  }); */
 
   it('generates decoder&encoders for tuples' , () => {
     shell.exec("./elm-gen d,e ../tests_data/Tuples.elm .");

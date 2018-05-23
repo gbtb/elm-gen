@@ -24,7 +24,7 @@ makeDependencyGraph nonHeads knownTypes statements =
         res =
             List.foldl (graphHelper knownTypes) (Ok ( nonHeads, Dict.empty )) statements
     in
-        Result.map (\( nonHeads_, graph ) -> ( Set.diff (Set.fromList <| Dict.keys graph) nonHeads_, graph )) res
+        Debug.log "g_inner" <| Result.map (\( nonHeads_, graph ) -> ( Set.diff (Set.fromList <| Dict.keys graph) nonHeads_, graph )) res
 
 
 
@@ -132,7 +132,12 @@ traverseType knownTypes type_ useQualType =
                     helper start listOfTypes
 
             TypeTuple listOfTypes ->
-                helper Set.empty listOfTypes
+                case listOfTypes of
+                    [ a ] ->
+                        helper Set.empty listOfTypes
+
+                    _ ->
+                        helper (Set.fromList [ [ "Tuple" ++ (toString <| List.length listOfTypes) ] ]) listOfTypes
 
             TypeRecord listOfFields ->
                 List.map Tuple.second listOfFields |> helper Set.empty
