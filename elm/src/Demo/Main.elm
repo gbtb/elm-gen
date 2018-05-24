@@ -123,7 +123,7 @@ subscriptions model =
 
 
 startInput =
-    """module DependentTypes exposing (..)
+    """module Example exposing (..)
 
 
 type Basic
