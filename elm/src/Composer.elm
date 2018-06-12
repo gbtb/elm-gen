@@ -335,7 +335,10 @@ generateDecoders genContext graphHeads =
                     Set.empty
 
         typesList =
-            Set.toList <| setdiff excludeTypes <| List.foldl Set.union graphHeads <| Dict.values <| genContext.graph
+            Set.toList <| setdiff excludeTypes <| List.foldl Set.union graphHeads <| Dict.values <| filteredGraph
+
+        filteredGraph =
+            Dict.filter (\type_ _ -> not <| Set.member type_ excludeTypes) genContext.graph
     in
         List.map (generateDecodersHelper genContext) typesList |> Result.combine
 
@@ -366,7 +369,7 @@ generateDecodersHelper genContext item =
                                 stmt
 
                         Nothing ->
-                            Err ("Type not found in types dict! " ++ (TypeName.toStr item) ++ " | " ++ (toString genContext.premadeStatements))
+                            Err ("Type not found in types dict! " ++ (TypeName.toStr item) ++ " | " ++ (toString genContext.excludedTypes))
             )
 
 

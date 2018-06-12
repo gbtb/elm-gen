@@ -47,6 +47,15 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     expect(ret.stdout).to.contain("Printing...");
   });
 
+  it('can use provided decoders for imported types' , () => {
+    shell.exec("./elm-gen d ../tests_data/InputFiles/WithDecoder2.elm .");
+    expect(
+      readFile(outPath("WithDecoder2Decoders.elm"))
+    ).to.equal(
+      readFile(dataPath("WithDecoder2Decoders.elm"))
+    );
+  });
+
   it('for simple dependent types' , () => {
     shell.exec("./elm-gen d ../tests_data/InputFiles/DependentTypes.elm . ");
     expect(
@@ -209,14 +218,7 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
-  it('can use provided decoders for imported types' , () => {
-    shell.exec("./elm-gen d ../tests_data/InputFiles/WithDecoder2.elm .");
-    expect(
-      readFile(outPath("WithDecoder2Decoders.elm"))
-    ).to.equal(
-      readFile(dataPath("WithDecoder2Decoders.elm"))
-    );
-  });
+  
 
   it('generates decoder for non-record type alias' , () => {
     shell.exec("./elm-gen d,e ../tests_data/InputFiles/Alias.elm .");
