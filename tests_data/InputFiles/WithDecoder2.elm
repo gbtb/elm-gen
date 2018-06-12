@@ -4,12 +4,16 @@ import Json.Decode as JD
 import Dict
 
 
+type alias SomeDict =
+    Dict.Dict String Int
+
+
 type A
-    = Foo Dict.Dict
+    = Foo SomeDict
     | Bar
     | Baz
 
 
-dictDecoder : JD.Decoder Dict.Dict
+dictDecoder : JD.Decoder SomeDict
 dictDecoder =
     JD.fail "It doesnot matter"
