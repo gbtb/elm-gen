@@ -15,8 +15,7 @@ os:
   - linux
 
 env: 
-  - ELM_VERSION=0.18.0
-  - TARGET_NODE_VERSION=10.1
+  - ELM_VERSION=0.18.0 TARGET_NODE_VERSION=10.1
 
 before_install:
   - | # epic build time improvement - see https://github.com/elm-lang/elm-compiler/issues/1473#issuecomment-245704142
