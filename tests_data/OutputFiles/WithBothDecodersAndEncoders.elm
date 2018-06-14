@@ -15,13 +15,6 @@ dependentTypeDecoder =
         ]
 
 
-maybeDecoder decoder =
-    JD.oneOf
-        [ JD.null Nothing
-        , JD.map Just decoder
-        ]
-
-
 recordDecoder : JD.Decoder Record
 recordDecoder =
     JD.decode Record
@@ -46,15 +39,6 @@ listEncoder : (a -> JE.Value) -> List a -> JE.Value
 listEncoder encoder value =
     JE.list <|
         List.map encoder value
-
-
-maybeEncoder valueEncoder value =
-    case value of
-        Just value ->
-            valueEncoder value
-
-        Nothing ->
-            JE.null
 
 
 recordEncoder : Record -> JE.Value
