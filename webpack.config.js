@@ -38,7 +38,7 @@ module.exports = {
   },
   plugins: [
     new CleanWebpackPlugin(['dist']),
-    new BannerPlugin({
+    /*new BannerPlugin({
       chunks : {
         "elm-gen": {
           beforeContent: '#!/usr/bin/env node\n'
@@ -47,6 +47,6 @@ module.exports = {
     }),
     new WebpackShellPlugin({
       onBuildEnd:['chmod +x dist/elm-gen'],
-    }),
+    }),*/
   ]
 };
