@@ -239,4 +239,14 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('generates record d&e with field name aliases' , () => {
+    shell.exec("./elm-gen d,e ../tests_data/InputFiles/FieldNameAliases.elm .");
+    
+    expect(
+      readFile(outPath("FieldNameAliasesDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("FieldNameAliasesDecodersAndEncoders.elm"))
+    );
+  });
+
 });
