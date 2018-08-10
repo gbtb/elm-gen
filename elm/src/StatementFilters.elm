@@ -125,14 +125,30 @@ eeHelper tcName s =
 extractMetaComment s =
     case s of
         Comment str ->
-            if Regex.contains (Regex.regex "//Ignore") str then
-                Just Ignore
-            else if Regex.contains (Regex.regex "//DefaultValue") str then
-                Just DefaultValue
-            else if Regex.contains (Regex.regex "//NoDeclaration") str then
-                Just NoDeclaration
-            else
-                Nothing
+            let
+                fieldNameApp =
+                    Regex.find (Regex.AtMost 1) (Regex.regex ".*//UseFieldNameConversion\\(([\\d\\w]+)\\).*") str
+
+                submatch =
+                    fieldNameApp
+                        |> List.head
+                        |> Maybe.map .submatches
+                        |> Maybe.map List.head
+                        |> Maybe.join
+                        |> Maybe.join
+            in
+                if Regex.contains (Regex.regex "//Ignore") str then
+                    Just Ignore
+                else if Regex.contains (Regex.regex "//DefaultValue") str then
+                    Just DefaultValue
+                else if Regex.contains (Regex.regex "//NoDeclaration") str then
+                    Just NoDeclaration
+                else if Maybe.isJust submatch then
+                    Maybe.map (\name -> FieldNameConversionApplication name) submatch
+                else if Regex.contains (Regex.regex "//FieldNameConversion") str then
+                    Just FieldNameConversion
+                else
+                    Nothing
 
         _ ->
             Nothing

@@ -6,18 +6,16 @@ Based on top of [elm-ast](https://github.com/Bogdanp/elm-ast) parsing library.
 ## Usage
 
 ### Online demo 
-    Simplified demonstration available [here](https://gbtb.github.io/elm-gen/).
+Simplified demonstration available [here](https://gbtb.github.io/elm-gen/).
 
 ### CLI tool
-CLI tool can be obtained from [NPM](https://www.npmjs.com/package/elm-gen). After installation, you can used it like that:
-`elm-gen decoders&encoders Model.elm .` Also note, that generated elm code for decoders uses NoRedInk elm-decode-pipeline package functions, so it must be installed into your project.
+CLI tool can be obtained from [NPM](https://www.npmjs.com/package/elm-gen). After installation, you can used it like that:  
+`elm-gen decoders&encoders Model.elm .`   Also note, that generated elm code for decoders uses NoRedInk elm-decode-pipeline package functions, so it must be installed into your project.  
 For more examples you may also look at functional tests in ts/MainTests.ts and correspondent files in tests_data folder.
 
 ##Features
-
 * Generation of decoders and/or encoders for user defined record and union types without type variables.
-* elm-gen supports basic elm types supported by Json.(Encode|Decode).
-
+* elm-gen supports basic elm types supported by Json.(Encode|Decode) plus tuples and Maybe's.
 
 ### Config
 Some configuration (mostly about naming) can be applied from config json-file. Example of config can be found in tests_data folder.

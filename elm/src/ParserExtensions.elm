@@ -13,6 +13,8 @@ applyMetaComments :
     List Statement
     -> { statements : List Statement
        , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
+       , fieldNameConversions : Dict.Dict String (Dict.Dict String String)
+       , fieldNameConversionApplications : Dict.Dict TypeName String
        , defaultUnionValues : Dict.Dict TypeName Expression
        , dontDeclareTypes : Set.Set TypeName
        }
@@ -23,6 +25,8 @@ applyMetaComments stmnts =
     in
         { statements = List.reverse foldResult.statements
         , defaultRecordValues = foldResult.defaultRecordValues
+        , fieldNameConversions = foldResult.fieldNameConversions
+        , fieldNameConversionApplications = foldResult.fieldNameConversionApplications
         , defaultUnionValues = foldResult.defaultUnionValues
         , dontDeclareTypes = foldResult.dontDeclareTypes
         }
@@ -32,6 +36,8 @@ type alias FoldHelper =
     { metaComment : Maybe MetaComment
     , typeName : Maybe TypeName
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
+    , fieldNameConversions : Dict.Dict String (Dict.Dict String String)
+    , fieldNameConversionApplications : Dict.Dict TypeName String
     , defaultUnionValues : Dict.Dict TypeName Expression
     , dontDeclareTypes : Set.Set TypeName
     , statements : List Statement
@@ -42,6 +48,8 @@ initFoldHelper =
     { metaComment = Nothing
     , typeName = Nothing
     , defaultRecordValues = Dict.empty
+    , fieldNameConversions = Dict.empty
+    , fieldNameConversionApplications = Dict.empty
     , defaultUnionValues = Dict.empty
     , dontDeclareTypes = Set.empty
     , statements = []

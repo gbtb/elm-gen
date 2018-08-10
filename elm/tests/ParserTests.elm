@@ -33,6 +33,8 @@ suite =
                         , TypeDeclaration (TypeConstructor [ "C" ] []) ([ TypeConstructor [ "Cons1" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "Cons2" ] ([ TypeConstructor [ "String" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Float" ] [] ]) ])
                         ]
                     , defaultRecordValues = Dict.empty
+                    , fieldNameConversions = Dict.empty
+                    , fieldNameConversionApplications = Dict.empty
                     , defaultUnionValues = Dict.empty
                     , dontDeclareTypes = Set.empty
                     }
@@ -87,5 +89,27 @@ suite =
                                     , ( ( "R", "b" ), List ([ Integer 1, Integer 2 ]) )
                                     ]
                         }
+                    )
+        , test "extracts field record aliases" <|
+            \_ ->
+                Expect.equal
+                    (applyMetaComments
+                        [ ModuleDeclaration [ "MetaComments" ] AllExport
+                        , Comment "| //NameConversion\n"
+                        , FunctionDeclaration "couchConversion" [] (Record ([ ( "id", String "_id" ), ( "rev", String "_rev" ) ]))
+                        , Comment "| //UseFieldNameConversion(couchConversion)\n"
+                        , TypeAliasDeclaration (TypeConstructor [ "R" ] [])
+                            (TypeRecord
+                                ([ ( "id", TypeConstructor [ "String" ] [] )
+                                 , ( "rev", TypeConstructor [ "String" ] [] )
+                                 , ( "payload", TypeConstructor [ "List" ] ([ TypeConstructor [ "Int" ] [] ]) )
+                                 ]
+                                )
+                            )
+                        ]
+                        |> (\r -> ( r.fieldNameConversions, r.fieldNameConversionApplications ))
+                    )
+                    ( Dict.fromList [ ( "couchConversion", Dict.fromList [ ( "id", "_id" ), ( "rev", "_rev" ) ] ) ]
+                    , Dict.fromList [ ( [ "R" ], "couchConversion" ) ]
                     )
         ]

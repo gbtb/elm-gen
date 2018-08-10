@@ -27,6 +27,8 @@ type MetaComment
     = Ignore
     | DefaultValue
     | NoDeclaration
+    | FieldNameConversion
+    | FieldNameConversionApplication String
 
 
 {-| //Ignore
