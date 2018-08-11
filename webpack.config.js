@@ -21,6 +21,7 @@ module.exports = {
       },
       { 
         test: /Main.ts$/,
+        exclude: /node_modules/,
         loader: StringReplacePlugin.replace({
             replacements: [
                 {
@@ -63,16 +64,5 @@ module.exports = {
       onBuildEnd:['chmod +x dist/elm-gen'],
     }),
     new StringReplacePlugin()
-    /*new ReplacePlugin({
-      exclude: [
-        /node_modules/
-      ],
-      include: [
-        /ts/
-      ],
-      values: {
-        '\"MY_VERSION\"': JSON.stringify(require("./package.json").version)
-      }
-    })*/
   ]
 };
