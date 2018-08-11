@@ -171,7 +171,7 @@ encodeRecordField ctx typeName ( name, type_ ) =
         nameAlias =
             getNameAlias ctx typeName name
     in
-        Result.map (\typeEncoder -> Tuple [ (String name), (Application <| typeEncoder) (Access (variable "" "value") [ nameAlias ]) ]) (typeEncoder ctx)
+        Result.map (\typeEncoder -> Tuple [ (String nameAlias), (Application <| typeEncoder) (Access (variable "" "value") [ name ]) ]) (typeEncoder ctx)
 
 
 encodeType ctx type_ =

@@ -18,10 +18,10 @@ suite : Test
 suite =
     let
         context =
-            initContext True "" defaultDecoderNameFunc Dict.empty Dict.empty Dict.empty Set.empty
+            initContext True "" defaultDecoderNameFunc Dict.empty Dict.empty Dict.empty Set.empty Dict.empty Dict.empty
 
         encContext =
-            initContext False "" defaultEncoderNameFunc Dict.empty Dict.empty Dict.empty Set.empty
+            initContext False "" defaultEncoderNameFunc Dict.empty Dict.empty Dict.empty Set.empty Dict.empty Dict.empty
     in
         describe "Ast transformation"
             [ describe "Multiple fields"
