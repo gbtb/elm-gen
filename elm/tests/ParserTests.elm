@@ -95,9 +95,10 @@ suite =
                 Expect.equal
                     (applyMetaComments
                         [ ModuleDeclaration [ "MetaComments" ] AllExport
-                        , Comment "| //NameConversion\n"
+                        , Comment "| //FieldNameConversion\n"
                         , FunctionDeclaration "couchConversion" [] (Record ([ ( "id", String "_id" ), ( "rev", String "_rev" ) ]))
                         , Comment "| //UseFieldNameConversion(couchConversion)\n"
+                        , FunctionTypeDeclaration "couchConversion" (TypeConstructor [ "R" ] [])
                         , TypeAliasDeclaration (TypeConstructor [ "R" ] [])
                             (TypeRecord
                                 ([ ( "id", TypeConstructor [ "String" ] [] )
