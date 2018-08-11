@@ -154,7 +154,7 @@ genEncoderForRecord ctx typeName recordAst =
         case recordAst of
             TypeRecord l ->
                 Result.map (Application (Variable <| qualifiedName ctx.decoderPrefix "object"))
-                    (Result.map List <| Result.combine <| List.map (encodeRecordField ctx) l)
+                    (Result.map List <| Result.combine <| List.map (encodeRecordField ctx typeName) l)
 
             TypeConstructor _ _ ->
                 Result.map (\gen -> Application gen (variable "" "value")) (encodeType ctx recordAst)
@@ -163,12 +163,15 @@ genEncoderForRecord ctx typeName recordAst =
                 Err "It is not a record!"
 
 
-encodeRecordField ctx ( name, type_ ) =
+encodeRecordField ctx typeName ( name, type_ ) =
     let
         typeEncoder ctx =
             encodeType ctx type_
+
+        nameAlias =
+            getNameAlias ctx typeName name
     in
-        Result.map (\typeEncoder -> Tuple [ (String name), (Application <| typeEncoder) (Access (variable "" "value") [ name ]) ]) (typeEncoder ctx)
+        Result.map (\typeEncoder -> Tuple [ (String nameAlias), (Application <| typeEncoder) (Access (variable "" "value") [ name ]) ]) (typeEncoder ctx)
 
 
 encodeType ctx type_ =

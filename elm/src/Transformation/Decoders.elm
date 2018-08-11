@@ -184,8 +184,11 @@ recordFieldDec ctx typeName ( name, type_ ) =
         typeDecoder ctx =
             decodeType ctx type_
 
+        nameAlias =
+            getNameAlias ctx typeName name
+
         appTemplate funcName =
-            Result.map (Application (Application (Variable <| qualifiedName ctx.decoderPrefix funcName) (String name))) (typeDecoder ctx)
+            Result.map (Application (Application (Variable <| qualifiedName ctx.decoderPrefix funcName) (String nameAlias))) (typeDecoder ctx)
     in
         case Dict.get ( typeName, name ) ctx.defaultRecordValues of
             Just defaultValue ->

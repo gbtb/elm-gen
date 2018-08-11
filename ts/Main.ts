@@ -4,7 +4,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parseGenCommand, getOutputFileName } from './Utils';
 
-const usageStr = `usage: elm-gen [command] [input_file] [output_file] options
+const version = "MY_VERSION";
+
+const usageStr = `elm-gen ${version}
+usage: elm-gen [command] [input_file] [output_file] options
 Command can be: decoders | encoders | decoders,encoders and also shortcutted to d,e.
 For now single input_file and output_file only supported.
 Available options:

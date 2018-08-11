@@ -13,6 +13,8 @@ applyMetaComments :
     List Statement
     -> { statements : List Statement
        , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
+       , fieldNameMapping : Dict.Dict String (Dict.Dict String String)
+       , fieldNameMappingApplications : Dict.Dict TypeName String
        , defaultUnionValues : Dict.Dict TypeName Expression
        , dontDeclareTypes : Set.Set TypeName
        }
@@ -23,6 +25,8 @@ applyMetaComments stmnts =
     in
         { statements = List.reverse foldResult.statements
         , defaultRecordValues = foldResult.defaultRecordValues
+        , fieldNameMapping = foldResult.fieldNameMapping
+        , fieldNameMappingApplications = foldResult.fieldNameMappingApplications
         , defaultUnionValues = foldResult.defaultUnionValues
         , dontDeclareTypes = foldResult.dontDeclareTypes
         }
@@ -32,6 +36,8 @@ type alias FoldHelper =
     { metaComment : Maybe MetaComment
     , typeName : Maybe TypeName
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
+    , fieldNameMapping : Dict.Dict String (Dict.Dict String String)
+    , fieldNameMappingApplications : Dict.Dict TypeName String
     , defaultUnionValues : Dict.Dict TypeName Expression
     , dontDeclareTypes : Set.Set TypeName
     , statements : List Statement
@@ -42,6 +48,8 @@ initFoldHelper =
     { metaComment = Nothing
     , typeName = Nothing
     , defaultRecordValues = Dict.empty
+    , fieldNameMapping = Dict.empty
+    , fieldNameMappingApplications = Dict.empty
     , defaultUnionValues = Dict.empty
     , dontDeclareTypes = Set.empty
     , statements = []
@@ -70,35 +78,62 @@ foldHelper item accum =
                 Just meta ->
                     if (asFilter <| extractType item) && meta == Ignore then
                         f1
-                    else if meta == NoDeclaration then
-                        case extractType item of
-                            Just ( typeName, _ ) ->
-                                { f2 | dontDeclareTypes = Set.insert typeName f2.dontDeclareTypes }
-
-                            Nothing ->
-                                f2
-                    else if meta == DefaultValue then
-                        case accum.typeName of
-                            Nothing ->
-                                case extractUnionTypeDefault item |> Maybe.orElse (extractRecordTypeDefault item) of
-                                    Just typeName ->
-                                        { accum | typeName = Just typeName }
-
-                                    Nothing ->
-                                        f3
-
-                            Just typeName ->
-                                case extractDefaultValues accum item of
-                                    Just newAcc ->
-                                        newAcc
-
-                                    Nothing ->
-                                        f3
                     else
-                        f3
+                        metaCommentCaseHelper accum meta item f1 f2 f3
 
                 Nothing ->
                     f2
+
+
+metaCommentCaseHelper accum meta item f1 f2 f3 =
+    case meta of
+        NoDeclaration ->
+            case extractType item of
+                Just ( typeName, _ ) ->
+                    { f2 | dontDeclareTypes = Set.insert typeName f2.dontDeclareTypes }
+
+                Nothing ->
+                    f2
+
+        DefaultValue ->
+            case accum.typeName of
+                Nothing ->
+                    case extractUnionTypeDefault item |> Maybe.orElse (extractRecordTypeDefault item) of
+                        Just typeName ->
+                            { accum | typeName = Just typeName }
+
+                        Nothing ->
+                            f3
+
+                Just typeName ->
+                    case extractDefaultValues accum item of
+                        Just newAcc ->
+                            newAcc
+
+                        Nothing ->
+                            f3
+
+        FieldNameConversion ->
+            case extractFieldNameConversion f1 item of
+                Just newAcc ->
+                    newAcc
+
+                Nothing ->
+                    f2
+
+        FieldNameConversionApplication conversionName ->
+            case extractType item of
+                Just ( typeName, _ ) ->
+                    { f2
+                        | fieldNameMappingApplications =
+                            Dict.insert typeName conversionName f2.fieldNameMappingApplications
+                    }
+
+                Nothing ->
+                    accum
+
+        _ ->
+            f3
 
 
 defaultValueHelper accum item =
@@ -158,3 +193,43 @@ extractRecordHelper accum typeName fieldList =
                 )
                 accum
                 fieldList
+
+
+{-| This func tries to extract field name conversion
+(aka special record mapping record field names to their aliases for decoding )
+-}
+extractFieldNameConversion accum item =
+    case item of
+        FunctionDeclaration funcName [] funcBody ->
+            extractRecord funcBody
+                |> Maybe.andThen
+                    (\fields ->
+                        List.foldl extractFieldNameConversionHelper (Just Dict.empty) fields
+                    )
+                |> Maybe.map
+                    (\dict ->
+                        { accum
+                            | fieldNameMapping = Dict.insert funcName dict accum.fieldNameMapping
+                        }
+                    )
+
+        _ ->
+            Nothing
+
+
+extractFieldNameConversionHelper ( name, expr ) accum =
+    case accum of
+        Nothing ->
+            Nothing
+
+        Just dict ->
+            case expr of
+                String s ->
+                    Dict.insert name s dict |> Just
+
+                _ ->
+                    Nothing
+
+
+resetTypeName a =
+    { a | typeName = Nothing }

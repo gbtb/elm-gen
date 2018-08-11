@@ -139,6 +139,8 @@ updateInitialParse comms model parsedStatements fileNames rootDir genCommand =
                     , outputFileName = outputFileName
                     , rootDir = rootDir
                     , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
+                    , fieldNameMapping = Dict.union model.fieldNameMapping metaParseResult.fieldNameMapping
+                    , fieldNameMappingApplications = Dict.union model.fieldNameMappingApplications metaParseResult.fieldNameMappingApplications
                     , defaultUnionValues =
                         Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
                     , dontDeclareTypes = Set.union model.dontDeclareTypes metaParseResult.dontDeclareTypes
@@ -173,6 +175,8 @@ updateAdditionalParse comms model parsedStatements fileNames genCommand =
                     | newlyParsedStatements = metaParseResult.statements
                     , defaultRecordValues = Dict.union model.defaultRecordValues metaParseResult.defaultRecordValues
                     , defaultUnionValues = Dict.union model.defaultUnionValues metaParseResult.defaultUnionValues
+                    , fieldNameMapping = Dict.union model.fieldNameMapping metaParseResult.fieldNameMapping
+                    , fieldNameMappingApplications = Dict.union model.fieldNameMappingApplications metaParseResult.fieldNameMappingApplications
                     , dontDeclareTypes = Set.union model.dontDeclareTypes metaParseResult.dontDeclareTypes
                   }
                 , Cmd.batch [ comms.logMessage <| "Parsing additional files: " ++ String.join ", " fileNames, makeCmd ResolveDependencies ]

@@ -27,6 +27,8 @@ type MetaComment
     = Ignore
     | DefaultValue
     | NoDeclaration
+    | FieldNameConversion
+    | FieldNameConversionApplication String
 
 
 {-| //Ignore
@@ -59,6 +61,8 @@ type alias Model =
     , providedEncoders : Dict.Dict TypeName String
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict TypeName Expression
+    , fieldNameMapping : Dict.Dict String (Dict.Dict String String)
+    , fieldNameMappingApplications : Dict.Dict TypeName String
     , dontDeclareTypes : Set.Set TypeName
     , generatedDecoders : List (List Statement)
     , generatedEncoders : List (List Statement)
@@ -82,6 +86,8 @@ initModel =
     , providedEncoders = Dict.empty
     , defaultRecordValues = Dict.empty
     , defaultUnionValues = Dict.empty
+    , fieldNameMapping = Dict.empty
+    , fieldNameMappingApplications = Dict.empty
     , dontDeclareTypes = Set.empty
     , generatedDecoders = []
     , generatedEncoders = []

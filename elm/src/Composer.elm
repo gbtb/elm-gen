@@ -31,6 +31,8 @@ type alias GenContext =
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
     , defaultUnionValues : Dict.Dict TypeName Expression
     , dontDeclareTypes : Set.Set TypeName
+    , fieldNameMapping : Dict.Dict String (Dict.Dict String String)
+    , fieldNameMappingApplications : Dict.Dict TypeName String
     , generatorFunc : TransformationContext -> Statement -> Result String (List Statement)
     , prefix : String
     , makeName : String -> String
@@ -60,7 +62,7 @@ makeFileLoadRequest model =
 
 
 {-| This function is designed to handle additional loading of type definitions came through fileLoadRequest
- as well as initial loading of provided input file(s)
+as well as initial loading of provided input file(s)
 -}
 resolveDependencies : Model -> Result String Model
 resolveDependencies model =
@@ -158,7 +160,7 @@ resolveDependencies model =
 
 
 {-| This func calculates unknown types from types used (userDefinedTypes) minus defined types in type-def dict,
-    minus those types that *could* be imported from wide imports (aka Import Dict)
+minus those types that *could* be imported from wide imports (aka Import Dict)
 -}
 getUnknownTypes wideImports usedTypes definedTypes =
     let
@@ -214,6 +216,8 @@ generate model =
                         , defaultRecordValues = model.defaultRecordValues
                         , defaultUnionValues = model.defaultUnionValues
                         , dontDeclareTypes = model.dontDeclareTypes
+                        , fieldNameMapping = model.fieldNameMapping
+                        , fieldNameMappingApplications = model.fieldNameMappingApplications
                         , generatorFunc = genDecoder
                         , prefix = getDecodePrefix model.config.jsonModulesImports.decode
                         , makeName = nameFunc
@@ -239,6 +243,8 @@ generate model =
                         , defaultRecordValues = model.defaultRecordValues
                         , defaultUnionValues = model.defaultUnionValues
                         , dontDeclareTypes = model.dontDeclareTypes
+                        , fieldNameMapping = model.fieldNameMapping
+                        , fieldNameMappingApplications = model.fieldNameMappingApplications
                         , generatorFunc = genEncoder
                         , prefix = getEncodePrefix model.config.jsonModulesImports.encode
                         , makeName = nameFunc
@@ -365,6 +371,8 @@ generateDecodersHelper genContext item =
                                     genContext.defaultRecordValues
                                     genContext.defaultUnionValues
                                     genContext.dontDeclareTypes
+                                    genContext.fieldNameMapping
+                                    genContext.fieldNameMappingApplications
                                 )
                                 stmt
 
