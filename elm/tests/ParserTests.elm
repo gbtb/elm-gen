@@ -33,8 +33,8 @@ suite =
                         , TypeDeclaration (TypeConstructor [ "C" ] []) ([ TypeConstructor [ "Cons1" ] ([ TypeConstructor [ "Int" ] [] ]), TypeConstructor [ "Cons2" ] ([ TypeConstructor [ "String" ] [], TypeConstructor [ "Int" ] [], TypeConstructor [ "Float" ] [] ]) ])
                         ]
                     , defaultRecordValues = Dict.empty
-                    , fieldNameConversions = Dict.empty
-                    , fieldNameConversionApplications = Dict.empty
+                    , fieldNameMapping = Dict.empty
+                    , fieldNameMappingApplications = Dict.empty
                     , defaultUnionValues = Dict.empty
                     , dontDeclareTypes = Set.empty
                     }
@@ -90,14 +90,14 @@ suite =
                                     ]
                         }
                     )
-        , test "extracts field record aliases" <|
+        , test "extracts field record mappings" <|
             \_ ->
                 Expect.equal
                     (applyMetaComments
                         [ ModuleDeclaration [ "MetaComments" ] AllExport
-                        , Comment "| //FieldNameConversion\n"
+                        , Comment "| //FieldNameMapping\n"
                         , FunctionDeclaration "couchConversion" [] (Record ([ ( "id", String "_id" ), ( "rev", String "_rev" ) ]))
-                        , Comment "| //UseFieldNameConversion(couchConversion)\n"
+                        , Comment "| //UseFieldNameMapping(couchConversion)\n"
                         , FunctionTypeDeclaration "couchConversion" (TypeConstructor [ "R" ] [])
                         , TypeAliasDeclaration (TypeConstructor [ "R" ] [])
                             (TypeRecord
@@ -108,7 +108,7 @@ suite =
                                 )
                             )
                         ]
-                        |> (\r -> ( r.fieldNameConversions, r.fieldNameConversionApplications ))
+                        |> (\r -> ( r.fieldNameMapping, r.fieldNameMappingApplications ))
                     )
                     ( Dict.fromList [ ( "couchConversion", Dict.fromList [ ( "id", "_id" ), ( "rev", "_rev" ) ] ) ]
                     , Dict.fromList [ ( [ "R" ], "couchConversion" ) ]

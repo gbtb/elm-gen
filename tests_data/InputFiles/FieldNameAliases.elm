@@ -1,6 +1,6 @@
 module FieldNameAliases exposing (..)
 
-{-| //UseFieldNameConversion(couchConversion)
+{-| //UseFieldNameMapping(couchConversion)
 -}
 
 
@@ -11,7 +11,7 @@ type alias R =
     }
 
 
-{-| //NameConversion
+{-| //FieldNameMapping
 -}
 couchConversion =
     { id = "_id"

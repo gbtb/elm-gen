@@ -13,8 +13,8 @@ applyMetaComments :
     List Statement
     -> { statements : List Statement
        , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
-       , fieldNameConversions : Dict.Dict String (Dict.Dict String String)
-       , fieldNameConversionApplications : Dict.Dict TypeName String
+       , fieldNameMapping : Dict.Dict String (Dict.Dict String String)
+       , fieldNameMappingApplications : Dict.Dict TypeName String
        , defaultUnionValues : Dict.Dict TypeName Expression
        , dontDeclareTypes : Set.Set TypeName
        }
@@ -25,8 +25,8 @@ applyMetaComments stmnts =
     in
         { statements = List.reverse foldResult.statements
         , defaultRecordValues = foldResult.defaultRecordValues
-        , fieldNameConversions = foldResult.fieldNameConversions
-        , fieldNameConversionApplications = foldResult.fieldNameConversionApplications
+        , fieldNameMapping = foldResult.fieldNameMapping
+        , fieldNameMappingApplications = foldResult.fieldNameMappingApplications
         , defaultUnionValues = foldResult.defaultUnionValues
         , dontDeclareTypes = foldResult.dontDeclareTypes
         }
@@ -36,8 +36,8 @@ type alias FoldHelper =
     { metaComment : Maybe MetaComment
     , typeName : Maybe TypeName
     , defaultRecordValues : Dict.Dict ( TypeName, String ) Expression
-    , fieldNameConversions : Dict.Dict String (Dict.Dict String String)
-    , fieldNameConversionApplications : Dict.Dict TypeName String
+    , fieldNameMapping : Dict.Dict String (Dict.Dict String String)
+    , fieldNameMappingApplications : Dict.Dict TypeName String
     , defaultUnionValues : Dict.Dict TypeName Expression
     , dontDeclareTypes : Set.Set TypeName
     , statements : List Statement
@@ -48,8 +48,8 @@ initFoldHelper =
     { metaComment = Nothing
     , typeName = Nothing
     , defaultRecordValues = Dict.empty
-    , fieldNameConversions = Dict.empty
-    , fieldNameConversionApplications = Dict.empty
+    , fieldNameMapping = Dict.empty
+    , fieldNameMappingApplications = Dict.empty
     , defaultUnionValues = Dict.empty
     , dontDeclareTypes = Set.empty
     , statements = []
@@ -125,8 +125,8 @@ metaCommentCaseHelper accum meta item f1 f2 f3 =
             case extractType item of
                 Just ( typeName, _ ) ->
                     { f2
-                        | fieldNameConversionApplications =
-                            Dict.insert typeName conversionName f2.fieldNameConversionApplications
+                        | fieldNameMappingApplications =
+                            Dict.insert typeName conversionName f2.fieldNameMappingApplications
                     }
 
                 Nothing ->
@@ -209,7 +209,7 @@ extractFieldNameConversion accum item =
                 |> Maybe.map
                     (\dict ->
                         { accum
-                            | fieldNameConversions = Dict.insert funcName dict accum.fieldNameConversions
+                            | fieldNameMapping = Dict.insert funcName dict accum.fieldNameMapping
                         }
                     )
 

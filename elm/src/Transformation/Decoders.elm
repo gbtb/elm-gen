@@ -184,8 +184,14 @@ recordFieldDec ctx typeName ( name, type_ ) =
         typeDecoder ctx =
             decodeType ctx type_
 
+        nameAlias =
+            Dict.get typeName ctx.fieldNameMappingApplications
+                |> Maybe.andThen (\mappingName -> Dict.get mappingName ctx.fieldNameMapping)
+                |> Maybe.andThen (\mapping -> Dict.get name mapping)
+                |> Maybe.withDefault name
+
         appTemplate funcName =
-            Result.map (Application (Application (Variable <| qualifiedName ctx.decoderPrefix funcName) (String name))) (typeDecoder ctx)
+            Result.map (Application (Application (Variable <| qualifiedName ctx.decoderPrefix funcName) (String nameAlias))) (typeDecoder ctx)
     in
         case Dict.get ( typeName, name ) ctx.defaultRecordValues of
             Just defaultValue ->

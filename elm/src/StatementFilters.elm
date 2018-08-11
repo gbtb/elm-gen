@@ -127,7 +127,7 @@ extractMetaComment s =
         Comment str ->
             let
                 fieldNameApp =
-                    Regex.find (Regex.AtMost 1) (Regex.regex ".*//UseFieldNameConversion\\(([\\d\\w]+)\\).*") str
+                    Regex.find (Regex.AtMost 1) (Regex.regex ".*//UseFieldNameMapping\\(([\\d\\w]+)\\).*") str
 
                 submatch =
                     fieldNameApp
@@ -145,7 +145,7 @@ extractMetaComment s =
                     Just NoDeclaration
                 else if Maybe.isJust submatch then
                     Maybe.map (\name -> FieldNameConversionApplication name) submatch
-                else if Regex.contains (Regex.regex "//FieldNameConversion") str then
+                else if Regex.contains (Regex.regex "//FieldNameMapping") str then
                     Just FieldNameConversion
                 else
                     Nothing
