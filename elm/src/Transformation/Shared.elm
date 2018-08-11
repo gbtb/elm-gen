@@ -69,3 +69,10 @@ initContext isDecoders prefix nameFunc userDefinedTypes d1 d2 s f1 f2 =
 
 pipeOp =
     BinOp (Variable [ "|>" ])
+
+
+getNameAlias ctx typeName name =
+    Dict.get typeName ctx.fieldNameMappingApplications
+        |> Maybe.andThen (\mappingName -> Dict.get mappingName ctx.fieldNameMapping)
+        |> Maybe.andThen (\mapping -> Dict.get name mapping)
+        |> Maybe.withDefault name

@@ -185,10 +185,7 @@ recordFieldDec ctx typeName ( name, type_ ) =
             decodeType ctx type_
 
         nameAlias =
-            Dict.get typeName ctx.fieldNameMappingApplications
-                |> Maybe.andThen (\mappingName -> Dict.get mappingName ctx.fieldNameMapping)
-                |> Maybe.andThen (\mapping -> Dict.get name mapping)
-                |> Maybe.withDefault name
+            getNameAlias ctx typeName name
 
         appTemplate funcName =
             Result.map (Application (Application (Variable <| qualifiedName ctx.decoderPrefix funcName) (String nameAlias))) (typeDecoder ctx)
