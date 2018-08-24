@@ -249,4 +249,16 @@ describe('Elm-gen by default produces decoder and encoders', () => {
     );
   });
 
+  it('no more stacktraces in TS-side errors, just message' , () => {
+    const ret = shell.exec("./elm-gen d,e ../tests_data/InputFiles/NoStackTracesInTsErrorsPlease.elm .");
+    
+    expect(ret.stderr).to.contain(
+      "no such file or directory"
+    );
+    expect(ret.stderr).to.not.contain(
+      ".js:"
+    );
+
+  });
+
 });
