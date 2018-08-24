@@ -36,6 +36,26 @@ Supports values of types `defaultValue: UnionType` for union types, and `default
 
 * NoDeclaration -- elm-gen won't generates type declaration for next type's decoder (usefull for preserving record structural typing ability for generated decoder )
 
-* FieldNameMapping - TODO
-
+* Field name aliases - You can define aliases for some field names to avoid issues with elm reserved words, and to make some *special* field names (like `_id` and `_rev` which stored by Couchdb) normally looking in Elm representation. For example, I use meta-comment and record to define some common aliases for Couchdb-mapped types: 
+```
+{-| //FieldNameMapping
+-}
+couchAliases =
+    { id = "_id"
+    , rev = "_rev"
+    , type_ = "_type"
+    }
+```
+And later I apply such mapping to other type via another meta-comment:
+```
+{-| //UseFieldNameMapping(couchAliases)
+-}
+type alias NewUser =
+    { id : String
+    , name : String
+    , password : String
+    , type_ : String
+    , ...
+    }
+```
 
