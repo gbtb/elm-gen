@@ -4,7 +4,7 @@
   "description": "Experimental CLI tool for generating Elm JSON Decoders and Encoders, written mostly in Elm",
   "scripts": {
     "test": "npm run build && mocha --reporter spec ./dist/tests",
-    "build": "webpack --verbose",
+    "build": "webpack",
     "unit-tests": "npm run build && mocha --reporter spec ./dist/unit-tests"
   },
   "files": [
@@ -44,6 +44,7 @@
     "webpack-sources": "^1.1.0"
   },
   "dependencies": {
+    "elm-gen": "^0.1.9",
     "minimist": "^1.2.0"
   }
 }

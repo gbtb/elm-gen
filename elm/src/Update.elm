@@ -29,6 +29,12 @@ type PseudoCmd
     | RequestFiles (List (List String))
 
 
+{-|
+
+    Function for state update of elm-gen app.
+    `comms` is a record, which provides feedback output functions (using commands),
+    which are mapped to ports for CLI tool, and to some Cmd's for demo page.
+-}
 update comms msg model =
     case msg of
         ReadConfig str ->

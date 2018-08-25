@@ -39,10 +39,14 @@ keysSet d =
     Set.fromList <| Dict.keys d
 
 
+{-| Checks if this GenCommand result in generating decoder
+-}
 willGenDecoder genCommand =
     genCommand == Decoders || genCommand == DecodersAndEncoders
 
 
+{-| Checks if this GenCommand result in generating encoder
+-}
 willGenEncoder genCommand =
     genCommand == Encoders || genCommand == DecodersAndEncoders
 

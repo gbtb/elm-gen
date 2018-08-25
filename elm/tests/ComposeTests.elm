@@ -99,8 +99,11 @@ suite =
 
                         definedTypes =
                             Set.fromList [ TypeName.fromStr "A" ]
+
+                        isDecodersProvided _ =
+                            False
                     in
                         Expect.equal
-                            (getUnknownTypes wideImportedModules usedTypes definedTypes)
+                            (getUnknownTypes wideImportedModules usedTypes definedTypes isDecodersProvided)
                             (Set.empty)
             ]

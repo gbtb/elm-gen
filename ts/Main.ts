@@ -104,6 +104,7 @@ function getFileContents(inputPath: string, files: [[string]]){
         }).join("\n");
         return {fileContents: fileContents, error: null}
     }catch(e){
-        return {fileContents: null, error: e}
+
+        return {fileContents: null, error: e.message}
     }
 }
