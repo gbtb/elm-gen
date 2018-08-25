@@ -261,4 +261,17 @@ describe('Elm-gen by default produces decoder and encoders', () => {
 
   });
 
+  it('if there is provided decoder and/or encoder, do not load file' , () => {
+    const ret = shell.exec("./elm-gen d,e ../tests_data/InputFiles/DecoderToImportedType.elm .");
+    
+    expect(
+      readFile(outPath("DecoderToImportedTypeDecodersAndEncoders.elm"))
+    ).to.equal(
+      readFile(dataPath("DecoderToImportedTypeDecodersAndEncoders.elm"))
+    );
+
+  });
+
+  
+
 });

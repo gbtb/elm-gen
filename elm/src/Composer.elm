@@ -122,7 +122,13 @@ resolveDependencies model =
                 joinedGraphRes
 
         unknownTypesRes =
-            Result.map2 (\usedTypes typesDict -> getUnknownTypes (getWideImports statements) usedTypes (keysSet typesDict))
+            Result.map2
+                (\usedTypes typesDict ->
+                    getUnknownTypes (getWideImports statements)
+                        usedTypes
+                        (keysSet typesDict)
+                        (isTypeDecodersAlreadyProvided model.genCommand providedDecoders providedEncoders)
+                )
                 usedTypesRes
                 typesDictRes
 
@@ -138,6 +144,12 @@ resolveDependencies model =
                 )
                 unknownTypesRes
                 moduleNameRes
+
+        providedDecoders =
+            Dict.union decoders model.providedDecoders
+
+        providedEncoders =
+            Dict.union encoders model.providedEncoders
     in
         Result.map4
             (\( graphHeads, graph ) unknownTypes importsDict typesDict ->
@@ -146,8 +158,8 @@ resolveDependencies model =
                     , unknownTypes = unknownTypes
                     , dependencies = ( graphHeads, graph )
                     , newlyParsedStatements = []
-                    , providedDecoders = Dict.union decoders model.providedDecoders
-                    , providedEncoders = Dict.union encoders model.providedEncoders
+                    , providedDecoders = providedDecoders
+                    , providedEncoders = providedEncoders
                     , importsDict =
                         Dict.union importsDict model.importsDict
                     , parsedStatements = model.parsedStatements ++ model.newlyParsedStatements
@@ -162,7 +174,7 @@ resolveDependencies model =
 {-| This func calculates unknown types from types used (userDefinedTypes) minus defined types in type-def dict,
 minus those types that *could* be imported from wide imports (aka Import Dict)
 -}
-getUnknownTypes wideImports usedTypes definedTypes =
+getUnknownTypes wideImports usedTypes definedTypes isTypeDecodersAlreadyProvided =
     let
         parsedTypes =
             Set.diff usedTypes definedTypes
@@ -171,7 +183,26 @@ getUnknownTypes wideImports usedTypes definedTypes =
             Set.fromList <|
                 ((TypeName.fromStr "Maybe") :: mappableTypes ++ tuplePseudoTypes)
     in
-        Set.diff parsedTypes hardcodedTypes |> Set.filter (\t -> not <| List.member (TypeName.getNamespace t) wideImports)
+        Set.diff parsedTypes hardcodedTypes
+            |> Set.filter (\t -> not <| List.member (TypeName.getNamespace t) wideImports)
+            |> Set.filter (not << isTypeDecodersAlreadyProvided)
+
+
+isTypeDecodersAlreadyProvided genCommand providedDecoders providedEncoders typeName =
+    let
+        decoderOk =
+            if willGenDecoder genCommand then
+                Dict.member typeName providedDecoders
+            else
+                True
+
+        encoderOk =
+            if willGenEncoder genCommand then
+                Dict.member typeName providedEncoders
+            else
+                True
+    in
+        decoderOk && encoderOk
 
 
 getWideImports statements =
