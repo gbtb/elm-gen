@@ -7,11 +7,11 @@ import WithDefaultRecord exposing (A, R)
 
 aDecoder : JD.Decoder A
 aDecoder =
-    JD.decode A
+    JD.succeed A
         |> JD.optional "r" rDecoder { i = 1 }
 
 
 rDecoder : JD.Decoder R
 rDecoder =
-    JD.decode R
+    JD.succeed R
         |> JD.required "i" JD.int

@@ -14,6 +14,6 @@ cDecoder =
 
 
 dDecoder =
-    JD.decode D
+    JD.succeed D
         |> JD.required "foo" JD.int
         |> JD.required "bar" cDecoder
