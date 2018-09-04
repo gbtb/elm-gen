@@ -8,7 +8,7 @@ import FieldNameAliases exposing (R)
 
 rDecoder : JD.Decoder R
 rDecoder =
-    JD.decode R
+    JD.succeed R
         |> JD.required "_id" JD.string
         |> JD.required "_rev" JD.string
         |> JD.required "payload" (JD.list JD.int)

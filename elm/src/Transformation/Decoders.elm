@@ -160,7 +160,7 @@ genDecoderForTypeAlias : TransformationContext -> TypeName -> Type -> Result Str
 genDecoderForTypeAlias ctx typeName recordAst =
     let
         decodeApp =
-            (Application (Variable <| qualifiedName ctx.decoderPrefix "decode") (Variable typeName))
+            (Application (Variable <| qualifiedName ctx.decoderPrefix "succeed") (Variable typeName))
     in
         case recordAst of
             TypeRecord l ->

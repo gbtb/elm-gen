@@ -17,6 +17,6 @@ aDecoder =
 
 rDecoder : JD.Decoder R
 rDecoder =
-    JD.decode R
+    JD.succeed R
         |> JD.required "a" JD.int
         |> JD.optional "b" (JD.list JD.string) [ "a" ]
