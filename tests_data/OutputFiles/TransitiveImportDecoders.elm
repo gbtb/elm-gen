@@ -18,12 +18,12 @@ nestedADecoder =
 
 nestedRDecoder : JD.Decoder NestedR
 nestedRDecoder =
-    JD.decode NestedR
+    JD.succeed NestedR
         |> JD.required "a" nestedADecoder
 
 
 rDecoder : JD.Decoder R
 rDecoder =
-    JD.decode R
+    JD.succeed R
         |> JD.required "a" aDecoder
         |> JD.required "b" nestedRDecoder

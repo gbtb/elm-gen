@@ -7,7 +7,7 @@ import Json.Decode.Pipeline as JD
 
 basicdecoder : JD.Decoder Basic
 basicdecoder =
-    JD.decode Basic
+    JD.succeed Basic
         |> JD.required "a" JD.int
         |> JD.required "b" JD.float
         |> JD.required "c" JD.string

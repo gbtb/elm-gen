@@ -35,14 +35,14 @@ maybeDecoder decoder =
 
 newTypeDecoder : JD.Decoder NewType
 newTypeDecoder =
-    JD.decode NewType
+    JD.succeed NewType
         |> JD.required "foo" (JD.list (JD.list JD.string))
         |> JD.required "bar" (maybeDecoder dependentTypeDecoder)
 
 
 recordDecoder : JD.Decoder Record
 recordDecoder =
-    JD.decode Record
+    JD.succeed Record
         |> JD.required "field1" (JD.list JD.float)
         |> JD.required "field2" basicDecoder
 

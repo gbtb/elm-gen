@@ -8,7 +8,7 @@ import Json.Encode as JE
 
 basicDecoder : JD.Decoder Basic
 basicDecoder =
-    JD.decode Basic
+    JD.succeed Basic
         |> JD.required "a" JD.int
         |> JD.required "b" JD.float
         |> JD.required "c" JD.string
