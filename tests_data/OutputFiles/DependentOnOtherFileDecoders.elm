@@ -1,9 +1,9 @@
 module DependentOnOtherFileDecoders exposing (..)
 
-import Json.Decode as JD
-import Json.Decode.Pipeline as JD
 import DependentOnOtherFile exposing (DependentType(..))
 import DependentTypes exposing (Basic(..), Record)
+import Json.Decode as JD
+import Json.Decode.Pipeline as JD
 
 
 basicDecoder : JD.Decoder Basic

@@ -1,9 +1,9 @@
 module AliasDecodersAndEncoders exposing (..)
 
+import Alias exposing (Tasks)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import Alias exposing (Tasks)
 
 
 tasksDecoder : JD.Decoder Tasks

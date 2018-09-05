@@ -131,13 +131,19 @@ printImports command importsDict typesDict conf =
                 List.map (\( moduleName, typeSet ) -> Result.map (ImportStatement moduleName Nothing) (toExport typeSet)) <|
                     Dict.toList importsDict
     in
-        case Result.map (\x -> List.map printStatement (extImports2 ++ x)) typesImports of
+        case Result.map (\x -> List.map printStatement <| List.sortBy importComparator (extImports2 ++ x)) typesImports of
             Ok l ->
                 l
 
             Err e ->
                 [ Err e ]
 
+
+importComparator stmt = 
+    case stmt of
+        ImportStatement moduleName _ _ -> moduleName
+    
+        _ -> []
 
 toExportHelper typesDict name =
     Result.map (\x -> TypeExport x (getExportSet typesDict name)) (TypeName.toSingleName name)

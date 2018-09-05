@@ -1,9 +1,9 @@
 module DecoderToImportedTypeDecodersAndEncoders exposing (..)
 
+import Basic exposing (Basic, timeDecoder, timeEncoder)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import Basic exposing (Basic, timeDecoder, timeEncoder)
 
 
 basicDecoder : JD.Decoder Basic
@@ -32,8 +32,8 @@ basicEncoder value =
         ]
 
 
-maybeEncoder valueEncoder value =
-    case value of
+maybeEncoder valueEncoder valueArg =
+    case valueArg of
         Just value ->
             valueEncoder value
 

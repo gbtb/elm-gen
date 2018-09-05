@@ -1,10 +1,10 @@
 module ThreeLevelsDepthDecodersAndEncoders exposing (..)
 
+import DependentOnOtherFile exposing (DependentType(..))
+import DependentTypes exposing (Basic(..), Record)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import DependentOnOtherFile exposing (DependentType(..))
-import DependentTypes exposing (Basic(..), Record)
 import ThreeLevelsDepth exposing (NewType)
 
 
@@ -79,8 +79,8 @@ listEncoder encoder value =
         List.map encoder value
 
 
-maybeEncoder valueEncoder value =
-    case value of
+maybeEncoder valueEncoder valueArg =
+    case valueArg of
         Just value ->
             valueEncoder value
 

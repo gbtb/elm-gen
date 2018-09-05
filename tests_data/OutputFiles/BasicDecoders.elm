@@ -1,8 +1,8 @@
 module BasicDecoders exposing (..)
 
+import Basic exposing (Basic)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
-import Basic exposing (Basic)
 
 
 basicDecoder : JD.Decoder Basic

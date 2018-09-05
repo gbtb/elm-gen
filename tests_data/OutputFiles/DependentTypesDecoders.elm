@@ -1,8 +1,8 @@
 module DependentTypesDecoders exposing (..)
 
+import DependentTypes exposing (Basic(..), Record)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
-import DependentTypes exposing (Basic(..), Record)
 
 
 basicDecoder : JD.Decoder Basic

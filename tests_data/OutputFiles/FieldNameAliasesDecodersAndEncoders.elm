@@ -1,9 +1,9 @@
 module FieldNameAliasesDecodersAndEncoders exposing (..)
 
+import FieldNameAliases exposing (R)
 import Json.Decode as JD
 import Json.Decode.Pipeline as JD
 import Json.Encode as JE
-import FieldNameAliases exposing (R)
 
 
 rDecoder : JD.Decoder R
